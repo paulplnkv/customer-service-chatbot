@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAllCustomersWithSummary } from "@/lib/db/pas";
 import { PasCustomersTable } from "@/components/pas-customers-dialog";
 

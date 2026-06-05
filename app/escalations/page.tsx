@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getAllEscalations } from "@/lib/db/escalations";
 import {
   Table,
