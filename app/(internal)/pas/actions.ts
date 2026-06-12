@@ -5,9 +5,9 @@ import {
   createPolicy as dbCreatePolicy,
   updatePolicy as dbUpdatePolicy,
   deletePolicy as dbDeletePolicy,
-  createVehicle as dbCreateVehicle,
-  updateVehicle as dbUpdateVehicle,
-  deleteVehicle as dbDeleteVehicle,
+  createAircraft as dbCreateAircraft,
+  updateAircraft as dbUpdateAircraft,
+  deleteAircraft as dbDeleteAircraft,
   createClaim as dbCreateClaim,
   updateClaim as dbUpdateClaim,
   deleteClaim as dbDeleteClaim,
@@ -92,60 +92,71 @@ export async function deletePolicyAction(policyId: string): Promise<ActionResult
   return { success: true };
 }
 
-// --- Vehicle Actions ---
+// --- Aircraft Actions ---
 
-export async function createVehicleAction(
+function parseAircraftForm(formData: FormData):
+  | { ok: true; data: {
+      registration: string;
+      serialNumber: string;
+      year: number;
+      make: string;
+      model: string;
+      hullValue: string | null;
+      seats: number | null;
+      primaryUse: string | null;
+    } }
+  | { ok: false; error: string } {
+  const registration = formData.get("registration") as string;
+  const serialNumber = formData.get("serialNumber") as string;
+  const yearStr = formData.get("year") as string;
+  const make = formData.get("make") as string;
+  const model = formData.get("model") as string;
+  const hullValue = (formData.get("hullValue") as string) || null;
+  const seatsStr = (formData.get("seats") as string) || "";
+  const primaryUse = (formData.get("primaryUse") as string) || null;
+
+  if (!registration || !serialNumber || !yearStr || !make || !model) {
+    return { ok: false, error: "Registration, serial number, year, make, and model are required." };
+  }
+  if (registration.length > 12) return { ok: false, error: "Registration too long (max 12)." };
+  if (serialNumber.length > 50) return { ok: false, error: "Serial number too long (max 50)." };
+  if (make.length > 100) return { ok: false, error: "Make too long (max 100)." };
+  if (model.length > 100) return { ok: false, error: "Model too long (max 100)." };
+  if (hullValue && isNaN(Number(hullValue))) return { ok: false, error: "Hull value must be a number." };
+  const year = parseInt(yearStr, 10);
+  if (isNaN(year)) return { ok: false, error: "Year must be a number." };
+  const seats = seatsStr ? parseInt(seatsStr, 10) : null;
+  if (seats !== null && isNaN(seats)) return { ok: false, error: "Seats must be a number." };
+
+  return { ok: true, data: { registration, serialNumber, year, make, model, hullValue, seats, primaryUse } };
+}
+
+export async function createAircraftAction(
   policyId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const make = formData.get("make") as string;
-  const model = formData.get("model") as string;
-  const yearStr = formData.get("year") as string;
-  const vin = formData.get("vin") as string;
-  const licensePlate = (formData.get("licensePlate") as string) || null;
-  const color = (formData.get("color") as string) || null;
+  const parsed = parseAircraftForm(formData);
+  if (!parsed.ok) return { success: false, error: parsed.error };
 
-  if (!make || !model || !yearStr || !vin) {
-    return { success: false, error: "Make, model, year, and VIN are required." };
-  }
-  if (make.length > 100) return { success: false, error: "Make too long (max 100)." };
-  if (model.length > 100) return { success: false, error: "Model too long (max 100)." };
-  if (vin.length > 17) return { success: false, error: "VIN too long (max 17)." };
-  const year = parseInt(yearStr, 10);
-  if (isNaN(year)) return { success: false, error: "Year must be a number." };
-
-  await dbCreateVehicle(policyId, { make, model, year, vin, licensePlate, color });
+  await dbCreateAircraft(policyId, parsed.data);
   revalidatePath("/pas");
   return { success: true };
 }
 
-export async function updateVehicleAction(
-  vehicleId: string,
+export async function updateAircraftAction(
+  aircraftId: string,
   formData: FormData
 ): Promise<ActionResult> {
-  const make = formData.get("make") as string;
-  const model = formData.get("model") as string;
-  const yearStr = formData.get("year") as string;
-  const vin = formData.get("vin") as string;
-  const licensePlate = (formData.get("licensePlate") as string) || null;
-  const color = (formData.get("color") as string) || null;
+  const parsed = parseAircraftForm(formData);
+  if (!parsed.ok) return { success: false, error: parsed.error };
 
-  if (!make || !model || !yearStr || !vin) {
-    return { success: false, error: "Make, model, year, and VIN are required." };
-  }
-  if (make.length > 100) return { success: false, error: "Make too long (max 100)." };
-  if (model.length > 100) return { success: false, error: "Model too long (max 100)." };
-  if (vin.length > 17) return { success: false, error: "VIN too long (max 17)." };
-  const year = parseInt(yearStr, 10);
-  if (isNaN(year)) return { success: false, error: "Year must be a number." };
-
-  await dbUpdateVehicle(vehicleId, { make, model, year, vin, licensePlate, color });
+  await dbUpdateAircraft(aircraftId, parsed.data);
   revalidatePath("/pas");
   return { success: true };
 }
 
-export async function deleteVehicleAction(vehicleId: string): Promise<ActionResult> {
-  await dbDeleteVehicle(vehicleId);
+export async function deleteAircraftAction(aircraftId: string): Promise<ActionResult> {
+  await dbDeleteAircraft(aircraftId);
   revalidatePath("/pas");
   return { success: true };
 }

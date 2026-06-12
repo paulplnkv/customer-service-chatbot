@@ -5,11 +5,13 @@ import { auth } from "@/lib/auth";
  * Run `npm run db:seed:pas` before running authenticated evals.
  */
 export const SEED_USERS = {
-  jane: { email: "jane.smith@example.com", password: "password123" },
-  robert: { email: "robert.johnson@example.com", password: "password123" },
-  maria: { email: "maria.garcia@example.com", password: "password123" },
-  david: { email: "david.chen@example.com", password: "password123" },
-  sarah: { email: "sarah.williams@example.com", password: "password123" },
+  harrington: { email: "robert.harrington@example.com", password: "password123" },
+  charter: { email: "ops@pinnacleaircharter.example", password: "password123" },
+  apex: { email: "risk@apexaerospace.example", password: "password123" },
+  skygate: { email: "insurance@skygate-fbo.example", password: "password123" },
+  skyview: { email: "ops@skyview-analytics.example", password: "password123" },
+  deltaag: { email: "office@deltaag-aviation.example", password: "password123" },
+  cascade: { email: "board@cascaderidgefc.example", password: "password123" },
 } as const;
 
 export type SeedUserKey = keyof typeof SEED_USERS;
@@ -24,7 +26,7 @@ export type SeedUserKey = keyof typeof SEED_USERS;
 const cookieCache = new Map<string, string>();
 
 export async function signInForEval(
-  user: SeedUserKey | { email: string; password: string } = "jane"
+  user: SeedUserKey | { email: string; password: string } = "harrington"
 ): Promise<string> {
   const credentials = typeof user === "string" ? SEED_USERS[user] : user;
   const cached = cookieCache.get(credentials.email);

@@ -1,165 +1,141 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
+import { readdirSync, readFileSync } from "fs";
+import { join, basename } from "path";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { knowledgeBase } from "../db/schema/knowledge-base";
-import { embed } from "ai";
+import { embedMany } from "ai";
+import mammoth from "mammoth";
 import { embeddingModel } from "../lib/ai/provider";
+import { chunkHtmlDocument } from "../lib/utils/chunk-text";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
 
-const SEED_ENTRIES = [
-  {
-    content: `Auto Insurance Coverage Types:
+// Directory holding the STR / Starr Aviation knowledge-base documents.
+const KB_DIR = join(process.cwd(), "demo", "Knowledge Base");
 
-Liability Coverage: This is required in most states. It pays for injuries and property damage you cause to others in an accident. It has two components: Bodily Injury Liability (covers medical expenses, lost wages, and legal fees for people you injure) and Property Damage Liability (covers repair or replacement of other people's property you damage).
+// Directory holding individual customer policy declaration sheets.
+const POLICIES_DIR = join(process.cwd(), "demo", "Policies");
 
-Collision Coverage: Pays to repair or replace your own vehicle after an accident with another vehicle or object, regardless of who is at fault. A deductible applies — you pay the deductible amount first, and the insurer covers the rest up to your vehicle's actual cash value.
+// Derive a short document-id "topic" from the filename, e.g.
+// "POL-AV-001_Aircraft_Policy_Summary.docx" -> "POL-AV-001".
+function deriveTopic(filename: string): string {
+  const stem = basename(filename, ".docx");
+  const match = stem.match(/^([A-Z]+-[A-Z]+(?:-[A-Z]+)?-\d+)/);
+  return match ? match[1] : stem;
+}
 
-Comprehensive Coverage: Covers damage to your vehicle from non-collision events such as theft, vandalism, fire, natural disasters, falling objects, and animal strikes. Also subject to a deductible.`,
-    metadata: { topic: "coverage-types", section: "overview" },
-  },
-  {
-    content: `Additional Auto Insurance Coverage Options:
+// Extract the policy number from the raw text content of a policy document.
+// Looks for a line matching "POLICY NO. STAR-XXX-YYYY-NNNNN".
+function extractPolicyNumber(text: string): string | null {
+  const match = text.match(/POLICY\s+NO\.?\s+(STAR-[A-Z0-9]+-\d{4}-\d+)/i);
+  return match ? match[1] : null;
+}
 
-Uninsured/Underinsured Motorist Coverage: Protects you when you're hit by a driver who has no insurance or insufficient insurance. Covers your medical bills and, in some states, vehicle repairs.
+async function ingestDirectory(
+  dir: string,
+  source: string,
+  topicFn: (filename: string, text: string) => string,
+  extraMetaFn?: (filename: string, text: string) => Record<string, unknown>
+): Promise<number> {
+  let files: string[];
+  try {
+    files = readdirSync(dir)
+      .filter((f) => f.toLowerCase().endsWith(".docx") && !f.startsWith("~$"))
+      .sort();
+  } catch {
+    console.warn(`Directory not found, skipping: ${dir}`);
+    return 0;
+  }
 
-Medical Payments Coverage (MedPay): Pays for medical expenses for you and your passengers after an accident, regardless of who caused it. Covers hospital visits, surgeries, X-rays, and ambulance fees.
+  if (files.length === 0) {
+    console.warn(`No .docx files found in ${dir}`);
+    return 0;
+  }
 
-Rental Reimbursement Coverage: Pays for a rental car while your vehicle is being repaired after a covered claim. Typically has a daily limit (e.g., $30-$50/day) and a maximum total.
+  let totalChunks = 0;
 
-Personal Injury Protection (PIP): Required in no-fault states. Covers medical expenses, lost wages, and other costs regardless of fault. Broader than MedPay as it also covers lost income and essential services.`,
-    metadata: { topic: "coverage-types", section: "additional" },
-  },
-  {
-    content: `How to File an Auto Insurance Claim:
+  for (const filename of files) {
+    const buffer = readFileSync(join(dir, filename));
+    const [{ value: html }, { value: plainText }] = await Promise.all([
+      mammoth.convertToHtml({ buffer }),
+      mammoth.extractRawText({ buffer }),
+    ]);
 
-Step 1: Ensure Safety — Move to a safe location if possible. Call 911 if there are injuries or road hazards.
+    const chunks = chunkHtmlDocument(html);
+    if (chunks.length === 0) {
+      console.log(`  Skipping ${filename} — no extractable content.`);
+      continue;
+    }
 
-Step 2: Document the Incident — Take photos of all vehicles involved, the accident scene, road conditions, and any visible injuries. Get the other driver's name, contact info, insurance company, and policy number. Collect witness information if available.
+    const topic = topicFn(filename, plainText);
+    const extraMeta = extraMetaFn ? extraMetaFn(filename, plainText) : {};
 
-Step 3: File a Police Report — In many states this is required, especially if there are injuries or significant damage. The police report number will be needed for your claim.
+    console.log(`  Embedding ${filename} (${topic}) — ${chunks.length} chunk(s)...`);
 
-Step 4: Contact Your Insurance Company — Report the claim as soon as possible. Most insurers have 24/7 claim reporting by phone or through their mobile app. You will receive a claim number for tracking.
+    const { embeddings } = await embedMany({
+      model: embeddingModel,
+      values: chunks,
+    });
 
-Step 5: Work with the Adjuster — An adjuster will be assigned to evaluate the damage, review the police report, and determine the payout. They may inspect your vehicle in person or request photos.
+    await db.insert(knowledgeBase).values(
+      chunks.map((content, i) => ({
+        content,
+        embedding: embeddings[i],
+        metadata: {
+          source,
+          filename,
+          topic,
+          chunkIndex: i,
+          totalChunks: chunks.length,
+          ...extraMeta,
+        },
+      }))
+    );
 
-Step 6: Get Repairs — Once the claim is approved, you can take your vehicle to a repair shop. Some insurers have a network of preferred shops, but you can usually choose your own.
+    totalChunks += chunks.length;
+    console.log(`    Stored ${chunks.length} chunk(s).\n`);
+  }
 
-Step 7: Receive Payment — After the deductible, the insurer pays for covered repairs or the actual cash value of your vehicle if it's totaled.`,
-    metadata: { topic: "claims-process", section: "how-to-file" },
-  },
-  {
-    content: `Understanding Your Auto Insurance Premium:
-
-Your premium is the amount you pay for your auto insurance policy, typically billed monthly or every six months. Several factors affect your premium:
-
-Driving Record: Accidents, traffic violations, and DUI convictions increase your premium. A clean record over 3-5 years typically qualifies you for discounts.
-
-Vehicle Type: The make, model, year, and safety features of your car affect cost. Expensive vehicles, sports cars, and cars with high theft rates cost more to insure.
-
-Coverage Levels: Higher coverage limits and lower deductibles mean higher premiums. A $500 deductible costs more than a $1,000 deductible but means you pay less out of pocket for a claim.
-
-Location: Urban areas with more traffic and higher crime rates typically have higher premiums. Your state's insurance regulations also play a role.
-
-Age and Experience: Young drivers (under 25) and new drivers pay more due to higher statistical accident rates. Rates typically decrease as you age and gain experience.
-
-Credit Score: In most states, insurers use credit-based insurance scores as a rating factor. A better credit score can mean lower premiums.
-
-Annual Mileage: The more you drive, the higher the risk of an accident. Low-mileage discounts may be available if you drive under a certain threshold (e.g., 7,500 miles/year).`,
-    metadata: { topic: "premiums", section: "factors" },
-  },
-  {
-    content: `Common Auto Insurance Discounts:
-
-Multi-Policy Discount (Bundling): Save 10-25% by combining auto insurance with homeowners, renters, or other policies with the same insurer.
-
-Good Driver Discount: Available to drivers with no accidents or violations for 3-5 years. Savings of 10-20%.
-
-Good Student Discount: Full-time students under 25 who maintain a B average or better can save 5-15%.
-
-Defensive Driving Course: Completing an approved course can reduce your premium by 5-10%.
-
-Anti-Theft Device Discount: Vehicles equipped with anti-theft systems, GPS tracking, or VIN etching may qualify for reduced rates.
-
-Safety Features Discount: Cars with airbags, anti-lock brakes, and electronic stability control often receive premium reductions.
-
-Pay-in-Full Discount: Paying your entire premium upfront instead of monthly installments can save 5-10%.
-
-Paperless and Autopay Discounts: Opting for electronic statements and automatic payments can provide small additional savings.`,
-    metadata: { topic: "discounts", section: "common" },
-  },
-  {
-    content: `What to Do After a Car Accident — FAQ:
-
-Q: Should I admit fault at the scene?
-A: No. Be cooperative and exchange information, but do not admit fault. Fault is determined by the insurance companies and sometimes by law enforcement based on evidence.
-
-Q: How long do I have to file a claim?
-A: Most insurance companies require prompt reporting, ideally within 24-72 hours. However, statutes of limitations for claims vary by state, typically 1-3 years.
-
-Q: Will filing a claim raise my premium?
-A: It depends on the circumstances. At-fault accidents typically raise premiums for 3-5 years. Not-at-fault claims and comprehensive claims (like theft or weather damage) may not affect your rate, depending on your insurer and state.
-
-Q: What if the other driver doesn't have insurance?
-A: Your Uninsured Motorist coverage will help pay for your injuries and damages. This is why UM coverage is highly recommended even in states where it's optional.
-
-Q: What is a total loss?
-A: Your vehicle is considered a total loss when the cost to repair it exceeds its actual cash value (ACV). The insurer pays you the ACV minus your deductible instead of paying for repairs.
-
-Q: Can I choose my own repair shop?
-A: Yes, in most states you have the right to choose your own repair shop. Your insurer may recommend preferred shops that offer guarantees, but you are not required to use them.`,
-    metadata: { topic: "faq", section: "after-accident" },
-  },
-  {
-    content: `Understanding Deductibles in Auto Insurance:
-
-A deductible is the amount you pay out of pocket before your insurance kicks in for a covered claim. For example, if you have a $500 deductible and $3,000 in damage, you pay $500 and your insurer pays $2,500.
-
-Types of Deductibles:
-- Collision Deductible: Applies when your car is damaged in an accident. Common amounts are $250, $500, or $1,000.
-- Comprehensive Deductible: Applies for non-collision damage (theft, weather, vandalism). Can be set separately from your collision deductible.
-
-Choosing Your Deductible:
-- Higher deductible = lower monthly premium, but more out-of-pocket cost per claim
-- Lower deductible = higher monthly premium, but less out-of-pocket cost per claim
-- Choose based on your savings and how much you can comfortably pay if an accident occurs
-- If your vehicle is older and has low market value, a higher deductible may make more financial sense
-
-Important Notes:
-- Deductibles do not apply to liability coverage (which pays for damage you cause to others)
-- Some policies offer $0 deductible for windshield repair
-- Deductibles reset per claim — if you have two separate incidents, you pay the deductible twice`,
-    metadata: { topic: "deductibles", section: "overview" },
-  },
-];
+  return totalChunks;
+}
 
 async function seed() {
-  console.log("Seeding knowledge base...\n");
+  console.log("Seeding knowledge base from .docx files...\n");
 
   // Clear existing entries
   await db.delete(knowledgeBase);
   console.log("Cleared existing knowledge base entries.\n");
 
-  for (const entry of SEED_ENTRIES) {
-    console.log(`Embedding: ${entry.metadata.topic}/${entry.metadata.section}...`);
+  // 1. Ingest general aviation knowledge-base articles
+  console.log(`[1/2] Knowledge base articles: ${KB_DIR}\n`);
+  const kbChunks = await ingestDirectory(
+    KB_DIR,
+    "kb-docx",
+    (filename) => deriveTopic(filename)
+  );
+  console.log(`Knowledge base: ${kbChunks} chunk(s) stored.\n`);
 
-    const { embedding } = await embed({
-      model: embeddingModel,
-      value: entry.content,
-    });
+  // 2. Ingest individual policy declaration documents
+  console.log(`[2/2] Policy declarations: ${POLICIES_DIR}\n`);
+  const policyChunks = await ingestDirectory(
+    POLICIES_DIR,
+    "policy-docx",
+    (_filename, text) => {
+      const policyNumber = extractPolicyNumber(text);
+      return policyNumber ?? _filename.replace(".docx", "");
+    },
+    (_filename, text) => {
+      const policyNumber = extractPolicyNumber(text);
+      return policyNumber ? { policyNumber } : {};
+    }
+  );
+  console.log(`Policy declarations: ${policyChunks} chunk(s) stored.\n`);
 
-    await db.insert(knowledgeBase).values({
-      content: entry.content,
-      embedding,
-      metadata: entry.metadata,
-    });
-
-    console.log(`  Stored (${entry.content.length} chars)\n`);
-  }
-
-  console.log(`\nDone! Seeded ${SEED_ENTRIES.length} knowledge base entries.`);
+  const totalChunks = kbChunks + policyChunks;
+  console.log(`Done! Seeded ${totalChunks} total knowledge base chunks.`);
   await pool.end();
 }
 

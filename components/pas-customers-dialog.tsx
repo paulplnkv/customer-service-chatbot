@@ -19,16 +19,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PolicyFormDialog } from "@/components/pas/policy-form-dialog";
-import { VehicleFormDialog } from "@/components/pas/vehicle-form-dialog";
+import { AircraftFormDialog } from "@/components/pas/aircraft-form-dialog";
 import { ClaimFormDialog } from "@/components/pas/claim-form-dialog";
 import { CoverageFormDialog } from "@/components/pas/coverage-form-dialog";
 import { DeleteConfirmDialog } from "@/components/pas/delete-confirm-dialog";
 import {
   deletePolicyAction,
-  deleteVehicleAction,
+  deleteAircraftAction,
   deleteClaimAction,
   deleteCoverageAction,
-} from "@/app/pas/actions";
+} from "@/app/(internal)/pas/actions";
 
 type Coverage = {
   id: string;
@@ -37,14 +37,16 @@ type Coverage = {
   premium: string;
 };
 
-type Vehicle = {
+type Aircraft = {
   id: string;
+  registration: string;
+  serialNumber: string;
+  year: number;
   make: string;
   model: string;
-  year: number;
-  vin: string;
-  licensePlate: string | null;
-  color: string | null;
+  hullValue: string | null;
+  seats: number | null;
+  primaryUse: string | null;
 };
 
 type Claim = {
@@ -68,7 +70,7 @@ type Policy = {
   endDate: string;
   premium: string;
   deductible: string;
-  vehicles: Vehicle[];
+  aircraft: Aircraft[];
   claims: Claim[];
   coverages: Coverage[];
 };
@@ -84,14 +86,14 @@ type Customer = {
 };
 
 type DeleteTarget =
-  | { kind: "policy"; id: string; label: string; childCounts: { vehicles: number; claims: number; coverages: number } }
-  | { kind: "vehicle"; id: string; label: string }
+  | { kind: "policy"; id: string; label: string; childCounts: { aircraft: number; claims: number; coverages: number } }
+  | { kind: "aircraft"; id: string; label: string }
   | { kind: "claim"; id: string; label: string }
   | { kind: "coverage"; id: string; label: string };
 
 type FormTarget =
   | { kind: "policy"; customerId: string; data?: Policy }
-  | { kind: "vehicle"; policyId: string; data?: Vehicle }
+  | { kind: "aircraft"; policyId: string; data?: Aircraft }
   | { kind: "claim"; policyId: string; data?: Claim }
   | { kind: "coverage"; policyId: string; data?: Coverage };
 
@@ -117,8 +119,8 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
     switch (deleteTarget.kind) {
       case "policy":
         return deletePolicyAction(deleteTarget.id);
-      case "vehicle":
-        return deleteVehicleAction(deleteTarget.id);
+      case "aircraft":
+        return deleteAircraftAction(deleteTarget.id);
       case "claim":
         return deleteClaimAction(deleteTarget.id);
       case "coverage":
@@ -129,9 +131,9 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
   function deleteDescription() {
     if (!deleteTarget) return "";
     if (deleteTarget.kind === "policy") {
-      const { vehicles, claims, coverages } = deleteTarget.childCounts;
+      const { aircraft, claims, coverages } = deleteTarget.childCounts;
       const parts: string[] = [];
-      if (vehicles > 0) parts.push(`${vehicles} vehicle${vehicles !== 1 ? "s" : ""}`);
+      if (aircraft > 0) parts.push(`${aircraft} aircraft`);
       if (claims > 0) parts.push(`${claims} claim${claims !== 1 ? "s" : ""}`);
       if (coverages > 0) parts.push(`${coverages} coverage${coverages !== 1 ? "s" : ""}`);
       const cascade = parts.length > 0 ? ` This will also delete ${parts.join(", ")}.` : "";
@@ -148,7 +150,7 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
             <TableHead className="w-[20%]">Customer</TableHead>
             <TableHead className="w-[12%]">Phone</TableHead>
             <TableHead className="w-[16%]">Policies</TableHead>
-            <TableHead className="w-[10%]">Vehicles</TableHead>
+            <TableHead className="w-[10%]">Aircraft</TableHead>
             <TableHead className="w-[16%]">Claims</TableHead>
             <TableHead className="w-[14%] text-right">Premium</TableHead>
             <TableHead className="w-[12%] text-right">Joined</TableHead>
@@ -159,8 +161,8 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
             const activePolicies = c.policies.filter(
               (p) => p.status === "active"
             ).length;
-            const totalVehicles = c.policies.reduce(
-              (sum, p) => sum + p.vehicles.length,
+            const totalAircraft = c.policies.reduce(
+              (sum, p) => sum + p.aircraft.length,
               0
             );
             const totalClaims = c.policies.reduce(
@@ -206,7 +208,7 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {totalVehicles}
+                  {totalAircraft}
                 </TableCell>
                 <TableCell>
                   <span>{totalClaims}</span>
@@ -314,7 +316,7 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                               id: policy.id,
                               label: policy.policyNumber,
                               childCounts: {
-                                vehicles: policy.vehicles.length,
+                                aircraft: policy.aircraft.length,
                                 claims: policy.claims.length,
                                 coverages: policy.coverages.length,
                               },
@@ -361,11 +363,11 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                       </div>
                     </div>
 
-                    {/* Vehicles section */}
+                    {/* Aircraft section */}
                     <div>
                       <div className="mb-1 flex items-center justify-between">
                         <span className="text-xs font-medium text-muted-foreground">
-                          Vehicles
+                          Aircraft
                         </span>
                         <Button
                           size="sm"
@@ -373,7 +375,7 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                           className="h-6 text-xs"
                           onClick={() =>
                             setFormTarget({
-                              kind: "vehicle",
+                              kind: "aircraft",
                               policyId: policy.id,
                             })
                           }
@@ -381,36 +383,44 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                           + Add
                         </Button>
                       </div>
-                      {policy.vehicles.length === 0 ? (
+                      {policy.aircraft.length === 0 ? (
                         <p className="text-xs text-muted-foreground">
-                          No vehicles.
+                          No aircraft.
                         </p>
                       ) : (
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Vehicle</TableHead>
-                              <TableHead>VIN</TableHead>
-                              <TableHead>Plate</TableHead>
+                              <TableHead>Aircraft</TableHead>
+                              <TableHead>Registration</TableHead>
+                              <TableHead>Serial #</TableHead>
+                              <TableHead className="text-right">
+                                Hull Value
+                              </TableHead>
                               <TableHead className="w-[100px]" />
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {policy.vehicles.map((v) => (
-                              <TableRow key={v.id}>
+                            {policy.aircraft.map((a) => (
+                              <TableRow key={a.id}>
                                 <TableCell>
-                                  {v.year} {v.make} {v.model}
-                                  {v.color && (
+                                  {a.year} {a.make} {a.model}
+                                  {a.primaryUse && (
                                     <span className="ml-1 text-muted-foreground">
-                                      ({v.color})
+                                      ({a.primaryUse})
                                     </span>
                                   )}
                                 </TableCell>
                                 <TableCell className="font-mono text-xs">
-                                  {v.vin}
+                                  {a.registration}
                                 </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                  {v.licensePlate ?? "\u2014"}
+                                <TableCell className="font-mono text-xs text-muted-foreground">
+                                  {a.serialNumber}
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground">
+                                  {a.hullValue
+                                    ? `$${parseFloat(a.hullValue).toLocaleString("en-US", { minimumFractionDigits: 2 })}`
+                                    : "\u2014"}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <Button
@@ -419,9 +429,9 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                                     className="h-6 text-xs"
                                     onClick={() =>
                                       setFormTarget({
-                                        kind: "vehicle",
+                                        kind: "aircraft",
                                         policyId: policy.id,
-                                        data: v,
+                                        data: a,
                                       })
                                     }
                                   >
@@ -433,9 +443,9 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                                     className="h-6 text-xs text-destructive"
                                     onClick={() =>
                                       setDeleteTarget({
-                                        kind: "vehicle",
-                                        id: v.id,
-                                        label: `${v.year} ${v.make} ${v.model}`,
+                                        kind: "aircraft",
+                                        id: a.id,
+                                        label: `${a.year} ${a.make} ${a.model}`,
                                       })
                                     }
                                   >
@@ -686,8 +696,8 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
           initial={formTarget.data ?? null}
         />
       )}
-      {formTarget?.kind === "vehicle" && (
-        <VehicleFormDialog
+      {formTarget?.kind === "aircraft" && (
+        <AircraftFormDialog
           open
           onOpenChange={(open) => {
             if (!open) setFormTarget(null);

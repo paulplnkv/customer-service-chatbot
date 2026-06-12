@@ -22,7 +22,7 @@ import {
 import {
   createClaimAction,
   updateClaimAction,
-} from "@/app/pas/actions";
+} from "@/app/(internal)/pas/actions";
 
 const CLAIM_TYPES = ["collision", "comprehensive", "liability", "hail", "theft"];
 const CLAIM_STATUSES = ["open", "in_review", "approved", "closed", "denied"];

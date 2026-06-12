@@ -12,21 +12,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  createVehicleAction,
-  updateVehicleAction,
-} from "@/app/pas/actions";
+  createAircraftAction,
+  updateAircraftAction,
+} from "@/app/(internal)/pas/actions";
 
-type VehicleData = {
+type AircraftData = {
   id: string;
+  registration: string;
+  serialNumber: string;
+  year: number;
   make: string;
   model: string;
-  year: number;
-  vin: string;
-  licensePlate: string | null;
-  color: string | null;
+  hullValue: string | null;
+  seats: number | null;
+  primaryUse: string | null;
 };
 
-export function VehicleFormDialog({
+export function AircraftFormDialog({
   open,
   onOpenChange,
   policyId,
@@ -35,7 +37,7 @@ export function VehicleFormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   policyId: string;
-  initial?: VehicleData | null;
+  initial?: AircraftData | null;
 }) {
   const isEdit = !!initial;
   const [loading, setLoading] = useState(false);
@@ -49,8 +51,8 @@ export function VehicleFormDialog({
     const formData = new FormData(e.currentTarget);
 
     const result = isEdit
-      ? await updateVehicleAction(initial.id, formData)
-      : await createVehicleAction(policyId, formData);
+      ? await updateAircraftAction(initial.id, formData)
+      : await createAircraftAction(policyId, formData);
 
     setLoading(false);
     if (result.success) {
@@ -72,15 +74,45 @@ export function VehicleFormDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Vehicle" : "Add Vehicle"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Aircraft" : "Add Aircraft"}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update the vehicle details below."
-              : "Fill in the details to add a vehicle to this policy."}
+              ? "Update the aircraft details below."
+              : "Fill in the details to add an aircraft to this policy."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="registration">Registration (N-Number)</Label>
+              <Input
+                id="registration"
+                name="registration"
+                defaultValue={initial?.registration ?? ""}
+                required
+                maxLength={12}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="serialNumber">Serial Number</Label>
+              <Input
+                id="serialNumber"
+                name="serialNumber"
+                defaultValue={initial?.serialNumber ?? ""}
+                required
+                maxLength={50}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="year">Year</Label>
+              <Input
+                id="year"
+                name="year"
+                type="number"
+                defaultValue={initial?.year ?? ""}
+                required
+              />
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="make">Make</Label>
               <Input
@@ -102,41 +134,31 @@ export function VehicleFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="year">Year</Label>
+              <Label htmlFor="hullValue">Hull Value</Label>
               <Input
-                id="year"
-                name="year"
+                id="hullValue"
+                name="hullValue"
                 type="number"
-                defaultValue={initial?.year ?? ""}
-                required
+                step="0.01"
+                defaultValue={initial?.hullValue ?? ""}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="vin">VIN</Label>
+              <Label htmlFor="seats">Seats</Label>
               <Input
-                id="vin"
-                name="vin"
-                defaultValue={initial?.vin ?? ""}
-                required
-                maxLength={17}
+                id="seats"
+                name="seats"
+                type="number"
+                defaultValue={initial?.seats ?? ""}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="licensePlate">License Plate</Label>
+              <Label htmlFor="primaryUse">Primary Use</Label>
               <Input
-                id="licensePlate"
-                name="licensePlate"
-                defaultValue={initial?.licensePlate ?? ""}
-                maxLength={20}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="color">Color</Label>
-              <Input
-                id="color"
-                name="color"
-                defaultValue={initial?.color ?? ""}
-                maxLength={50}
+                id="primaryUse"
+                name="primaryUse"
+                defaultValue={initial?.primaryUse ?? ""}
+                maxLength={100}
               />
             </div>
           </div>

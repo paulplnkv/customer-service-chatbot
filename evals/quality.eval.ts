@@ -14,8 +14,9 @@ import {
 
 evalite("Quality: Billing & payments", {
   data: [
-    { input: "What payment plans do you offer for auto insurance premiums?" },
-    { input: "What happens if I miss a payment on my auto policy?" },
+    { input: "What payment plans are available for my aviation premium?" },
+    { input: "What is minimum earned premium and why does it apply?" },
+    { input: "How is my refund calculated if I cancel mid-term?" },
   ],
   task: async (input) => callChat({ message: input }),
   scorers: [
@@ -26,83 +27,82 @@ evalite("Quality: Billing & payments", {
   ],
 });
 
-// evalite("Quality: Claims process", {
-//   data: [
-//     { input: "How do I file an auto claim after a car accident?" },
-//     { input: "What information do I need to report a claim?" },
-//     { input: "What are the different claim statuses I might see?" },
-//     { input: "How does subrogation work if the other driver was at fault?" },
-//   ],
-//   task: async (input) => callChat({ message: input }),
-//   scorers: [
-//     responseIsNonEmpty,
-//     toolWasCalled("searchKnowledgeBase"),
-//     groundedInToolResults,
-//     answerIsHelpful,
-//   ],
-// });
+evalite("Quality: Claims process", {
+  data: [
+    { input: "How do I file an aircraft claim?" },
+    { input: "What do I do immediately after an accident or incident?" },
+    { input: "Do I have to report a bird strike or hard landing?" },
+    { input: "What is a constructive total loss?" },
+  ],
+  task: async (input) => callChat({ message: input }),
+  scorers: [
+    responseIsNonEmpty,
+    toolWasCalled("searchKnowledgeBase"),
+    groundedInToolResults,
+    answerIsHelpful,
+  ],
+});
 
-// evalite("Quality: Coverage & policy info", {
-//   data: [
-//     { input: "What's the difference between collision and comprehensive coverage?" },
-//     { input: "What does 100/300/100 mean for liability limits?" },
-//     { input: "Is uninsured motorist coverage required in Texas?" },
-//     { input: "Does my Pinnacle policy cover me if I drive into Mexico?" },
-//   ],
-//   task: async (input) => callChat({ message: input }),
-//   scorers: [
-//     responseIsNonEmpty,
-//     toolWasCalled("searchKnowledgeBase"),
-//     groundedInToolResults,
-//     answerIsHelpful,
-//   ],
-// });
+evalite("Quality: Coverage & policy info", {
+  data: [
+    { input: "What is the difference between in-flight and not-in-flight hull coverage?" },
+    { input: "What does 'agreed value' mean and will my payout be depreciated?" },
+    { input: "What is a Combined Single Limit (CSL)?" },
+    { input: "Who is covered to fly my aircraft under the policy?" },
+  ],
+  task: async (input) => callChat({ message: input }),
+  scorers: [
+    responseIsNonEmpty,
+    toolWasCalled("searchKnowledgeBase"),
+    groundedInToolResults,
+    answerIsHelpful,
+  ],
+});
 
-// evalite("Quality: Endorsements & add-ons", {
-//   data: [
-//     { input: "Do you offer gap coverage for my auto loan?" },
-//     { input: "How does accident forgiveness work?" },
-//     { input: "What does the ride-share endorsement cover?" },
-//     { input: "Do you have roadside assistance? What does it include?" },
-//   ],
-//   task: async (input) => callChat({ message: input }),
-//   scorers: [
-//     responseIsNonEmpty,
-//     toolWasCalled("searchKnowledgeBase"),
-//     groundedInToolResults,
-//     answerIsHelpful,
-//   ],
-// });
+evalite("Quality: Endorsements & add-ons", {
+  data: [
+    { input: "Does my policy cover flying to Mexico or the Bahamas?" },
+    { input: "Can I add my aircraft lender as a loss payee?" },
+    { input: "Is war and terrorism covered, and can I buy it back?" },
+    { input: "Can I get a credit while my aircraft is grounded for the winter?" },
+  ],
+  task: async (input) => callChat({ message: input }),
+  scorers: [
+    responseIsNonEmpty,
+    toolWasCalled("searchKnowledgeBase"),
+    groundedInToolResults,
+    answerIsHelpful,
+  ],
+});
 
-// evalite("Quality: Products & pricing", {
-//   data: [
-//     { input: "What coverage packages does Pinnacle offer?" },
-//     { input: "What's included in the Premier plan?" },
-//     { input: "What discounts are available on my auto policy?" },
-//     { input: "What factors affect my auto insurance premium?" },
-//   ],
-//   task: async (input) => callChat({ message: input }),
-//   scorers: [
-//     responseIsNonEmpty,
-//     toolWasCalled("searchKnowledgeBase"),
-//     groundedInToolResults,
-//     answerIsHelpful,
-//   ],
-// });
+evalite("Quality: Products & pricing", {
+  data: [
+    { input: "What coverage packages does STR offer?" },
+    { input: "What is the difference between Preferred and Premier?" },
+    { input: "What factors affect my premium?" },
+    { input: "How do higher liability limits change my price?" },
+  ],
+  task: async (input) => callChat({ message: input }),
+  scorers: [
+    responseIsNonEmpty,
+    toolWasCalled("searchKnowledgeBase"),
+    groundedInToolResults,
+    answerIsHelpful,
+  ],
+});
 
-// evalite("Quality: FAQ - common customer questions", {
-//   data: [
-//     { input: "How do I get my proof of insurance ID card?" },
-//     { input: "Do I need to list all drivers in my household on my policy?" },
-//     { input: "My child is going to college out of state. Are they still covered?" },
-//     { input: "Is my car covered if it gets damaged by hail?" },
-//     { input: "Does my policy cover personal belongings stolen from my car?" },
-//   ],
-//   task: async (input) => callChat({ message: input }),
-//   scorers: [
-//     responseIsNonEmpty,
-//     toolWasCalled("searchKnowledgeBase"),
-//     groundedInToolResults,
-//     answerIsHelpful,
-//   ],
-// });
+evalite("Quality: FAQ - common customer questions", {
+  data: [
+    { input: "What does it mean that my policy is 'surplus lines'?" },
+    { input: "How long is my policy in force?" },
+    { input: "Can I get a Certificate of Insurance for my airport or lender?" },
+    { input: "Can a student pilot fly my insured aircraft?" },
+  ],
+  task: async (input) => callChat({ message: input }),
+  scorers: [
+    responseIsNonEmpty,
+    toolWasCalled("searchKnowledgeBase"),
+    groundedInToolResults,
+    answerIsHelpful,
+  ],
+});

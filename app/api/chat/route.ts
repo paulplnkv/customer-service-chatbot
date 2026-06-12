@@ -98,6 +98,7 @@ export async function POST(req: Request) {
     stopWhen: stepCountIs(5),
     experimental_context: {
       conversationId: chatId,
+      isCustomerFacing: true,
       ...(isAuthenticated ? { userId: identity.userId } : {}),
     },
     experimental_telemetry: {

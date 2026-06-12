@@ -20,7 +20,7 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmDialog } from "@/components/pas/delete-confirm-dialog";
-import { deleteChunkAction } from "@/app/kb/actions";
+import { deleteChunkAction } from "@/app/(internal)/kb/actions";
 import { Trash2 } from "lucide-react";
 
 type Chunk = {

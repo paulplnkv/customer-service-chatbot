@@ -3,7 +3,6 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 import { resolveSessionFromHeaders } from "@/lib/session";
 import { getConversationWithMessages } from "@/lib/db/conversations";
 import { dbMessagesToUIMessages } from "@/lib/db/messages";
-import { getEscalationByConversationId } from "@/lib/db/escalations";
 
 export default async function ConversationPage({
   params,
@@ -12,10 +11,7 @@ export default async function ConversationPage({
 }) {
   const { conversationId } = await params;
   const identity = await resolveSessionFromHeaders();
-  const [result, escalation] = await Promise.all([
-    getConversationWithMessages(conversationId, identity),
-    getEscalationByConversationId(conversationId),
-  ]);
+  const result = await getConversationWithMessages(conversationId, identity);
 
   if (!result) {
     redirect("/");
@@ -27,7 +23,6 @@ export default async function ConversationPage({
     <ChatInterface
       conversationId={conversationId}
       initialMessages={initialMessages}
-      escalation={escalation ? { reason: escalation.reason ?? "", status: escalation.status } : undefined}
     />
   );
 }

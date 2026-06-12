@@ -98,7 +98,7 @@ describe("validateOutput", () => {
       );
       expect(result.isValid).toBe(false);
       expect(result.replacementMessage).toBeTruthy();
-      expect(result.replacementMessage).toContain("Pinnacle Home & Auto Insurance");
+      expect(result.replacementMessage).toContain("STR Aviation Insurance");
     });
   });
 });

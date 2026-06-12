@@ -21,7 +21,7 @@ import {
 import {
   createPolicyAction,
   updatePolicyAction,
-} from "@/app/pas/actions";
+} from "@/app/(internal)/pas/actions";
 
 const POLICY_TYPES = ["auto", "home", "life", "health"];
 const POLICY_STATUSES = ["active", "expired", "pending", "cancelled"];

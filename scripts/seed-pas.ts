@@ -2,7 +2,7 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { customers, policies, vehicles, claims, coverages } from "../db/schema/pas";
+import { customers, policies, aircraft, claims, coverages } from "../db/schema/pas";
 import { user, account } from "../db/schema/auth";
 import { hashPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
@@ -12,63 +12,61 @@ const db = drizzle(pool);
 
 const SEED_PASSWORD = "password123";
 
+// Aviation policyholders sourced from the STR / Starr Aviation sample policy
+// declarations (demo/Policies/*.docx). Coverages with an "Included" premium in
+// the source are seeded with a premium of "0.00".
 const MOCK_DATA = [
   {
     customer: {
       userId: "seed-user-1",
-      firstName: "Jane",
-      lastName: "Smith",
-      email: "jane.smith@example.com",
-      phone: "(555) 123-4567",
-      address: "742 Evergreen Terrace, Springfield, IL 62704",
-      dateOfBirth: "1985-03-15",
+      firstName: "Robert J.",
+      lastName: "Harrington",
+      email: "robert.harrington@example.com",
+      phone: "(480) 555-0147",
+      address: "4312 Meadow Lane, Scottsdale, AZ 85251",
+      dateOfBirth: "1968-05-12",
     },
     policies: [
       {
-        policyNumber: "AUTO-2024-001",
-        type: "auto",
+        policyNumber: "STAR-GA-2024-00447",
+        type: "ga-hull-liability",
         status: "active",
-        startDate: "2024-01-15",
-        endDate: "2025-01-15",
-        premium: "1250.00",
-        deductible: "500.00",
-        vehicles: [
+        startDate: "2024-01-01",
+        endDate: "2025-01-01",
+        premium: "5245.00",
+        deductible: "2500.00",
+        aircraft: [
           {
-            make: "Toyota",
-            model: "Camry",
-            year: 2022,
-            vin: "4T1BF1FK3CU123456",
-            licensePlate: "ABC-1234",
-            color: "Silver",
-          },
-          {
-            make: "Honda",
-            model: "CR-V",
-            year: 2023,
-            vin: "2HKRW2H53MH654321",
-            licensePlate: "XYZ-5678",
-            color: "Blue",
+            registration: "N6148R",
+            serialNumber: "172S12345",
+            year: 2018,
+            make: "Cessna",
+            model: "172S Skyhawk SP",
+            hullValue: "285000.00",
+            seats: 4,
+            primaryUse: "Pleasure & Business",
           },
         ],
         claims: [
           {
-            claimNumber: "CLM-2024-0001",
+            claimNumber: "STAR-CLM-2024-0447",
             status: "closed",
-            type: "collision",
-            description: "Rear-ended at stoplight on Main Street. Minor bumper damage to Toyota Camry.",
-            amount: "2800.00",
-            dateOfIncident: "2024-06-12",
-            dateFiled: "2024-06-13",
-            dateResolved: "2024-07-20",
+            type: "hull-not-in-flight",
+            description:
+              "Hangar door struck the left wingtip during ground handling. Not-in-flight hull claim; repaired and closed.",
+            amount: "8200.00",
+            dateOfIncident: "2024-08-03",
+            dateFiled: "2024-08-05",
+            dateResolved: "2024-09-18",
           },
         ],
         coverages: [
-          { type: "liability", limitAmount: "100000.00", premium: "450.00" },
-          { type: "collision", limitAmount: "50000.00", premium: "320.00" },
-          { type: "comprehensive", limitAmount: "50000.00", premium: "180.00" },
-          { type: "uninsured_motorist", limitAmount: "100000.00", premium: "150.00" },
-          { type: "medical_payments", limitAmount: "10000.00", premium: "75.00" },
-          { type: "rental", limitAmount: "1500.00", premium: "75.00" },
+          { type: "hull_in_flight", limitAmount: "285000.00", premium: "3820.00" },
+          { type: "hull_not_in_flight", limitAmount: "285000.00", premium: "0.00" },
+          { type: "bodily_injury_liability", limitAmount: "1000000.00", premium: "1240.00" },
+          { type: "property_damage_liability", limitAmount: "1000000.00", premium: "0.00" },
+          { type: "medical_payments", limitAmount: "10000.00", premium: "185.00" },
+          { type: "passenger_liability", limitAmount: "300000.00", premium: "0.00" },
         ],
       },
     ],
@@ -76,60 +74,62 @@ const MOCK_DATA = [
   {
     customer: {
       userId: "seed-user-2",
-      firstName: "Robert",
-      lastName: "Johnson",
-      email: "robert.johnson@example.com",
-      phone: "(555) 234-5678",
-      address: "1600 Pennsylvania Ave, Washington, DC 20500",
-      dateOfBirth: "1972-11-08",
+      firstName: "Pinnacle Air Charter",
+      lastName: "LLC",
+      email: "ops@pinnacleaircharter.example",
+      phone: "(801) 555-0188",
+      address: "2850 Executive Pkwy, Suite 300, Salt Lake City, UT 84117",
+      dateOfBirth: null,
     },
     policies: [
       {
-        policyNumber: "AUTO-2024-002",
-        type: "auto",
+        policyNumber: "STAR-135-2024-00881",
+        type: "part135-charter-fleet",
         status: "active",
-        startDate: "2024-03-01",
-        endDate: "2025-03-01",
-        premium: "980.00",
-        deductible: "1000.00",
-        vehicles: [
+        startDate: "2024-03-15",
+        endDate: "2025-03-15",
+        premium: "258300.00",
+        deductible: "25000.00",
+        aircraft: [
           {
-            make: "Ford",
-            model: "F-150",
-            year: 2021,
-            vin: "1FTEW1EP5MFA98765",
-            licensePlate: "TRK-9012",
-            color: "Red",
+            registration: "N412PC",
+            serialNumber: "1946",
+            year: 2020,
+            make: "Pilatus",
+            model: "PC-12 NG",
+            hullValue: "4200000.00",
+            seats: null,
+            primaryUse: "Charter / Cargo",
+          },
+          {
+            registration: "N631CJ",
+            serialNumber: "525C-0238",
+            year: 2019,
+            make: "Cessna",
+            model: "Citation CJ3+",
+            hullValue: "5800000.00",
+            seats: null,
+            primaryUse: "Charter — Pax",
+          },
+          {
+            registration: "N350PA",
+            serialNumber: "FL-1034",
+            year: 2017,
+            make: "Beechcraft",
+            model: "King Air 350",
+            hullValue: "3100000.00",
+            seats: null,
+            primaryUse: "Charter / Medevac",
           },
         ],
-        claims: [
-          {
-            claimNumber: "CLM-2024-0002",
-            status: "in_review",
-            type: "comprehensive",
-            description: "Hail damage to roof and hood during severe thunderstorm.",
-            amount: "4500.00",
-            dateOfIncident: "2024-09-05",
-            dateFiled: "2024-09-06",
-            dateResolved: null,
-          },
-          {
-            claimNumber: "CLM-2024-0003",
-            status: "approved",
-            type: "collision",
-            description: "Side-swiped in parking lot. Driver side door and fender damaged.",
-            amount: "3200.00",
-            dateOfIncident: "2024-04-18",
-            dateFiled: "2024-04-19",
-            dateResolved: "2024-05-25",
-          },
-        ],
+        claims: [],
         coverages: [
-          { type: "liability", limitAmount: "50000.00", premium: "350.00" },
-          { type: "collision", limitAmount: "40000.00", premium: "280.00" },
-          { type: "comprehensive", limitAmount: "40000.00", premium: "150.00" },
-          { type: "uninsured_motorist", limitAmount: "50000.00", premium: "100.00" },
-          { type: "medical_payments", limitAmount: "5000.00", premium: "50.00" },
+          { type: "hull_in_flight_all_risk", limitAmount: "13100000.00", premium: "148200.00" },
+          { type: "third_party_bodily_injury_property_damage", limitAmount: "50000000.00", premium: "82500.00" },
+          { type: "passenger_liability", limitAmount: "20000000.00", premium: "0.00" },
+          { type: "crew_personal_accident", limitAmount: "500000.00", premium: "9800.00" },
+          { type: "war_and_allied_perils", limitAmount: "10000000.00", premium: "14600.00" },
+          { type: "ground_support_equipment", limitAmount: "450000.00", premium: "3200.00" },
         ],
       },
     ],
@@ -137,56 +137,40 @@ const MOCK_DATA = [
   {
     customer: {
       userId: "seed-user-3",
-      firstName: "Maria",
-      lastName: "Garcia",
-      email: "maria.garcia@example.com",
-      phone: "(555) 345-6789",
-      address: "456 Oak Boulevard, Austin, TX 78701",
-      dateOfBirth: "1990-07-22",
+      firstName: "Apex Aerospace Components",
+      lastName: "Inc.",
+      email: "risk@apexaerospace.example",
+      phone: "(316) 555-0122",
+      address: "6700 Innovation Drive, Wichita, KS 67226",
+      dateOfBirth: null,
     },
     policies: [
       {
-        policyNumber: "AUTO-2024-003",
-        type: "auto",
+        policyNumber: "STAR-APL-2024-02214",
+        type: "aerospace-products-liability",
         status: "active",
-        startDate: "2024-06-01",
-        endDate: "2025-06-01",
-        premium: "1480.00",
-        deductible: "500.00",
-        vehicles: [
+        startDate: "2024-07-01",
+        endDate: "2025-07-01",
+        premium: "1760000.00",
+        deductible: "500000.00",
+        aircraft: [],
+        claims: [
           {
-            make: "Tesla",
-            model: "Model 3",
-            year: 2024,
-            vin: "5YJ3E1EA8PF111222",
-            licensePlate: "EV-3344",
-            color: "White",
-          },
-          {
-            make: "Chevrolet",
-            model: "Equinox",
-            year: 2020,
-            vin: "3GNAXKEV1LS222333",
-            licensePlate: "SUV-7788",
-            color: "Black",
-          },
-          {
-            make: "Volkswagen",
-            model: "Jetta",
-            year: 2019,
-            vin: "3VWC57BU3KM333444",
-            licensePlate: "VW-1122",
-            color: "Gray",
+            claimNumber: "STAR-CLM-2024-2214",
+            status: "in_review",
+            type: "products-liability",
+            description:
+              "Claims-made notice: alleged hydraulic actuator defect on a regional jet. Under review; reported within the policy period.",
+            amount: null,
+            dateOfIncident: "2024-10-09",
+            dateFiled: "2024-10-15",
+            dateResolved: null,
           },
         ],
-        claims: [],
         coverages: [
-          { type: "liability", limitAmount: "250000.00", premium: "520.00" },
-          { type: "collision", limitAmount: "75000.00", premium: "380.00" },
-          { type: "comprehensive", limitAmount: "75000.00", premium: "240.00" },
-          { type: "uninsured_motorist", limitAmount: "250000.00", premium: "180.00" },
-          { type: "medical_payments", limitAmount: "25000.00", premium: "85.00" },
-          { type: "rental", limitAmount: "2000.00", premium: "75.00" },
+          { type: "products_completed_operations_liability", limitAmount: "200000000.00", premium: "1248000.00" },
+          { type: "grounding_liability", limitAmount: "50000000.00", premium: "388000.00" },
+          { type: "product_recall_expense", limitAmount: "5000000.00", premium: "124000.00" },
         ],
       },
     ],
@@ -194,76 +178,31 @@ const MOCK_DATA = [
   {
     customer: {
       userId: "seed-user-4",
-      firstName: "David",
-      lastName: "Chen",
-      email: "david.chen@example.com",
-      phone: "(555) 456-7890",
-      address: "789 Pine Street, San Francisco, CA 94102",
-      dateOfBirth: "1988-01-30",
+      firstName: "SkyGate Aviation Services",
+      lastName: "Inc.",
+      email: "insurance@skygate-fbo.example",
+      phone: "(303) 555-0163",
+      address: "1 Control Tower Rd, Suite 100, Englewood, CO 80112",
+      dateOfBirth: null,
     },
     policies: [
       {
-        policyNumber: "AUTO-2023-010",
-        type: "auto",
-        status: "expired",
-        startDate: "2023-02-01",
-        endDate: "2024-02-01",
-        premium: "1100.00",
-        deductible: "750.00",
-        vehicles: [
-          {
-            make: "BMW",
-            model: "330i",
-            year: 2021,
-            vin: "WBA5R1C56M7D44555",
-            licensePlate: "LUX-4455",
-            color: "Midnight Blue",
-          },
-        ],
-        claims: [
-          {
-            claimNumber: "CLM-2023-0010",
-            status: "denied",
-            type: "collision",
-            description: "Collision with deer on highway. Front-end damage. Claim denied — incident occurred after policy expiration.",
-            amount: "6800.00",
-            dateOfIncident: "2024-02-15",
-            dateFiled: "2024-02-16",
-            dateResolved: "2024-03-01",
-          },
-        ],
-        coverages: [
-          { type: "liability", limitAmount: "100000.00", premium: "420.00" },
-          { type: "collision", limitAmount: "60000.00", premium: "350.00" },
-          { type: "comprehensive", limitAmount: "60000.00", premium: "200.00" },
-        ],
-      },
-      {
-        policyNumber: "AUTO-2024-010",
-        type: "auto",
+        policyNumber: "STAR-FBO-2024-00663",
+        type: "fbo-airport-liability",
         status: "active",
-        startDate: "2024-04-01",
-        endDate: "2025-04-01",
-        premium: "1350.00",
-        deductible: "500.00",
-        vehicles: [
-          {
-            make: "BMW",
-            model: "330i",
-            year: 2021,
-            vin: "WBA5R1C56M7D44555",
-            licensePlate: "LUX-4455",
-            color: "Midnight Blue",
-          },
-        ],
+        startDate: "2024-06-01",
+        endDate: "2025-06-01",
+        premium: "293400.00",
+        deductible: "25000.00",
+        aircraft: [],
         claims: [],
         coverages: [
-          { type: "liability", limitAmount: "100000.00", premium: "450.00" },
-          { type: "collision", limitAmount: "60000.00", premium: "380.00" },
-          { type: "comprehensive", limitAmount: "60000.00", premium: "220.00" },
-          { type: "uninsured_motorist", limitAmount: "100000.00", premium: "150.00" },
-          { type: "medical_payments", limitAmount: "10000.00", premium: "75.00" },
-          { type: "rental", limitAmount: "1500.00", premium: "75.00" },
+          { type: "airport_general_liability", limitAmount: "10000000.00", premium: "68400.00" },
+          { type: "hangarkeepers_liability", limitAmount: "5000000.00", premium: "88600.00" },
+          { type: "products_completed_operations", limitAmount: "10000000.00", premium: "42200.00" },
+          { type: "pollution_liability", limitAmount: "5000000.00", premium: "28800.00" },
+          { type: "commercial_auto_liability", limitAmount: "1000000.00", premium: "9800.00" },
+          { type: "fbo_property", limitAmount: "8200000.00", premium: "24400.00" },
         ],
       },
     ],
@@ -271,58 +210,217 @@ const MOCK_DATA = [
   {
     customer: {
       userId: "seed-user-5",
-      firstName: "Sarah",
-      lastName: "Williams",
-      email: "sarah.williams@example.com",
-      phone: "(555) 567-8901",
-      address: "321 Maple Drive, Denver, CO 80202",
-      dateOfBirth: "1995-09-14",
+      firstName: "SkyView Analytics",
+      lastName: "LLC",
+      email: "ops@skyview-analytics.example",
+      phone: "(919) 555-0107",
+      address: "1830 Commerce Blvd, Suite 220, Raleigh, NC 27601",
+      dateOfBirth: null,
     },
     policies: [
       {
-        policyNumber: "AUTO-2024-005",
-        type: "auto",
+        policyNumber: "STAR-UAS-2024-01105",
+        type: "uas-commercial",
         status: "active",
-        startDate: "2024-08-01",
-        endDate: "2025-08-01",
-        premium: "890.00",
-        deductible: "1000.00",
-        vehicles: [
+        startDate: "2024-02-01",
+        endDate: "2025-02-01",
+        premium: "14440.00",
+        deductible: "500.00",
+        aircraft: [
           {
-            make: "Subaru",
-            model: "Outback",
+            registration: "FA3A93712D",
+            serialNumber: "M300-RTK-01",
             year: 2022,
-            vin: "4S4BTAPC3N3555666",
-            licensePlate: "MTN-2233",
-            color: "Forest Green",
+            make: "DJI",
+            model: "Matrice 300 RTK",
+            hullValue: "28500.00",
+            seats: null,
+            primaryUse: "Infrastructure Inspection",
           },
           {
-            make: "Mazda",
-            model: "MX-5 Miata",
-            year: 2023,
-            vin: "JM1NDAD71P0777888",
-            licensePlate: "FUN-9900",
-            color: "Soul Red",
+            registration: "FA3B10248C",
+            serialNumber: "M300-RTK-02",
+            year: 2022,
+            make: "DJI",
+            model: "Matrice 300 RTK",
+            hullValue: "31200.00",
+            seats: null,
+            primaryUse: "Precision Mapping",
+          },
+          {
+            registration: "FA2C88041A",
+            serialNumber: "EVO2-PRO-01",
+            year: 2021,
+            make: "Autel Robotics",
+            model: "EVO II Pro",
+            hullValue: "3800.00",
+            seats: null,
+            primaryUse: "Aerial Photography",
+          },
+          {
+            registration: "FA2D00312E",
+            serialNumber: "SKYDIO-2PE-01",
+            year: 2021,
+            make: "Skydio",
+            model: "2+ Enterprise",
+            hullValue: "2400.00",
+            seats: null,
+            primaryUse: "Structural Inspection",
+          },
+        ],
+        claims: [],
+        coverages: [
+          { type: "hull_physical_damage", limitAmount: "65900.00", premium: "3840.00" },
+          { type: "payload_sensor_equipment", limitAmount: "64000.00", premium: "2280.00" },
+          { type: "third_party_bodily_injury_property_damage", limitAmount: "5000000.00", premium: "6400.00" },
+          { type: "invasion_of_privacy_defense", limitAmount: "250000.00", premium: "1100.00" },
+          { type: "non_owned_uas_liability", limitAmount: "1000000.00", premium: "820.00" },
+        ],
+      },
+    ],
+  },
+  {
+    customer: {
+      userId: "seed-user-6",
+      firstName: "Delta Ag Aviation",
+      lastName: "Inc.",
+      email: "office@deltaag-aviation.example",
+      phone: "(662) 555-0182",
+      address: "Rte. 4 Box 88, Greenville, MS 38701",
+      dateOfBirth: null,
+    },
+    policies: [
+      {
+        policyNumber: "STAR-AG-2024-00329",
+        type: "agricultural-aviation",
+        status: "active",
+        startDate: "2024-04-01",
+        endDate: "2025-04-01",
+        premium: "226500.00",
+        deductible: "10000.00",
+        aircraft: [
+          {
+            registration: "N802DV",
+            serialNumber: "802A-0441",
+            year: 2021,
+            make: "Air Tractor",
+            model: "AT-802A",
+            hullValue: "1100000.00",
+            seats: 1,
+            primaryUse: "Aerial Application",
+          },
+          {
+            registration: "N502DA",
+            serialNumber: "502B-1822",
+            year: 2019,
+            make: "Air Tractor",
+            model: "AT-502B",
+            hullValue: "620000.00",
+            seats: 1,
+            primaryUse: "Aerial Application",
+          },
+          {
+            registration: "N510TA",
+            serialNumber: "GE-0148",
+            year: 2016,
+            make: "Thrush Aircraft",
+            model: "510G",
+            hullValue: "480000.00",
+            seats: 1,
+            primaryUse: "Aerial Application",
+          },
+        ],
+        claims: [],
+        coverages: [
+          { type: "hull_in_flight_all_risk", limitAmount: "2200000.00", premium: "82600.00" },
+          { type: "third_party_bodily_injury_property_damage", limitAmount: "10000000.00", premium: "58400.00" },
+          { type: "drift_spray_damage_liability", limitAmount: "2000000.00", premium: "48200.00" },
+          { type: "crop_damage_liability", limitAmount: "1000000.00", premium: "24100.00" },
+          { type: "pilot_personal_accident", limitAmount: "300000.00", premium: "8400.00" },
+          { type: "ground_equipment_tender_vehicles", limitAmount: "220000.00", premium: "4800.00" },
+        ],
+      },
+    ],
+  },
+  {
+    customer: {
+      userId: "seed-user-7",
+      firstName: "Cascade Ridge Flying Club",
+      lastName: "LLC",
+      email: "board@cascaderidgefc.example",
+      phone: "(503) 555-0141",
+      address: "8820 Hangar Row, Suite 14, Hillsboro, OR 97124",
+      dateOfBirth: null,
+    },
+    policies: [
+      {
+        policyNumber: "STAR-GA-2024-00891",
+        type: "ga-fleet-flying-club",
+        status: "active",
+        startDate: "2024-05-01",
+        endDate: "2025-05-01",
+        premium: "44300.00",
+        deductible: "7500.00",
+        aircraft: [
+          {
+            registration: "N5527K",
+            serialNumber: "18282041",
+            year: 2015,
+            make: "Cessna",
+            model: "182T Skylane",
+            hullValue: "310000.00",
+            seats: 4,
+            primaryUse: "Cross-Country / IFR Training",
+          },
+          {
+            registration: "N8814W",
+            serialNumber: "2843727",
+            year: 2008,
+            make: "Piper",
+            model: "PA-28-181 Archer III",
+            hullValue: "168000.00",
+            seats: 4,
+            primaryUse: "Local / VFR Training",
+          },
+          {
+            registration: "N3691B",
+            serialNumber: "E-3912",
+            year: 2019,
+            make: "Beechcraft",
+            model: "A36 Bonanza",
+            hullValue: "580000.00",
+            seats: 6,
+            primaryUse: "Pleasure & Business",
+          },
+          {
+            registration: "N227CR",
+            serialNumber: "1388",
+            year: 2022,
+            make: "Cirrus",
+            model: "SR22T G6",
+            hullValue: "895000.00",
+            seats: 5,
+            primaryUse: "Cross-Country / IFR",
           },
         ],
         claims: [
           {
-            claimNumber: "CLM-2024-0005",
-            status: "open",
-            type: "comprehensive",
-            description: "Windshield cracked by rock debris on I-70. Subaru Outback.",
-            amount: "850.00",
-            dateOfIncident: "2024-11-02",
-            dateFiled: "2024-11-03",
-            dateResolved: null,
+            claimNumber: "STAR-CLM-2024-0891",
+            status: "approved",
+            type: "hull-in-flight",
+            description:
+              "Prop strike on the Cirrus SR22T (N227CR) following a gear-up taxi incident. Engine tear-down endorsement applied; claim approved.",
+            amount: "62000.00",
+            dateOfIncident: "2024-07-22",
+            dateFiled: "2024-07-23",
+            dateResolved: "2024-09-30",
           },
         ],
         coverages: [
-          { type: "liability", limitAmount: "50000.00", premium: "300.00" },
-          { type: "collision", limitAmount: "35000.00", premium: "250.00" },
-          { type: "comprehensive", limitAmount: "35000.00", premium: "140.00" },
-          { type: "uninsured_motorist", limitAmount: "50000.00", premium: "100.00" },
-          { type: "medical_payments", limitAmount: "5000.00", premium: "50.00" },
+          { type: "hull_all_risk_agreed_value", limitAmount: "1953000.00", premium: "35240.00" },
+          { type: "bodily_injury_property_damage_liability", limitAmount: "2000000.00", premium: "8460.00" },
+          { type: "passenger_liability", limitAmount: "500000.00", premium: "0.00" },
+          { type: "medical_payments", limitAmount: "10000.00", premium: "600.00" },
         ],
       },
     ],
@@ -338,7 +436,7 @@ async function seed() {
   // Clear existing data in reverse dependency order
   await db.delete(coverages);
   await db.delete(claims);
-  await db.delete(vehicles);
+  await db.delete(aircraft);
   await db.delete(policies);
   await db.delete(customers);
   // Clear seed auth users (only those with seed-user- prefix)
@@ -377,18 +475,18 @@ async function seed() {
       .returning({ id: customers.id });
 
     for (const policyData of entry.policies) {
-      const { vehicles: vehicleData, claims: claimData, coverages: coverageData, ...policyValues } = policyData;
+      const { aircraft: aircraftData, claims: claimData, coverages: coverageData, ...policyValues } = policyData;
 
       const [policy] = await db
         .insert(policies)
         .values({ ...policyValues, customerId: customer.id })
         .returning({ id: policies.id });
 
-      if (vehicleData.length > 0) {
-        await db.insert(vehicles).values(
-          vehicleData.map((v) => ({ ...v, policyId: policy.id }))
+      if (aircraftData.length > 0) {
+        await db.insert(aircraft).values(
+          aircraftData.map((a) => ({ ...a, policyId: policy.id }))
         );
-        console.log(`  Added ${vehicleData.length} vehicle(s) to ${policyValues.policyNumber}`);
+        console.log(`  Added ${aircraftData.length} aircraft to ${policyValues.policyNumber}`);
       }
 
       if (claimData.length > 0) {
@@ -409,7 +507,7 @@ async function seed() {
     console.log();
   }
 
-  console.log(`Done! Seeded ${MOCK_DATA.length} customers with policies, vehicles, claims, and coverages.`);
+  console.log(`Done! Seeded ${MOCK_DATA.length} customers with policies, aircraft, claims, and coverages.`);
   await pool.end();
 }
 

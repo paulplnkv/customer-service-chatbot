@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Outfit } from 'next/font/google';
+import { Geist_Mono, Inter_Tight, Instrument_Serif } from 'next/font/google';
 import "./globals.css";
 
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-sans' });
+const interTight = Inter_Tight({ subsets: ['latin'], variable: '--font-sans' });
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const instrumentSerif = Instrument_Serif({
+  weight: '400',
   subsets: ['latin'],
+  variable: '--font-serif',
 });
 
 const geistMono = Geist_Mono({
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pinnacle Home & Auto Insurance",
-  description: "AI-powered customer service chatbot for Pinnacle Home & Auto Insurance",
+  title: "STARR — Starr Aviation Insurance",
+  description: "AI underwriting assistant for STARR Aviation Insurance policyholders",
 };
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${interTight.variable} ${instrumentSerif.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>

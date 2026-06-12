@@ -11,9 +11,14 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: Request) {
-  const { conversationId, reason } = (await req.json()) as {
+  const {
+    conversationId,
+    reason,
+    customerEmail: bodyEmail,
+  } = (await req.json()) as {
     conversationId: string;
     reason: string;
+    customerEmail?: string;
   };
 
   if (!conversationId || !UUID_REGEX.test(conversationId)) {
@@ -68,7 +73,8 @@ export async function POST(req: Request) {
       .join("\n");
   }
 
-  // Look up customer info if authenticated
+  // Look up customer info if authenticated; otherwise use the email the
+  // anonymous user supplied in the escalation widget so an agent can follow up.
   let customerName: string | null = null;
   let customerEmail: string | null = null;
 
@@ -78,6 +84,9 @@ export async function POST(req: Request) {
       customerName = `${customer.firstName} ${customer.lastName}`;
       customerEmail = customer.email;
     }
+  } else if (typeof bodyEmail === "string" && /^\S+@\S+\.\S+$/.test(bodyEmail.trim())) {
+    customerEmail = bodyEmail.trim();
+    customerName = customerEmail.split("@")[0];
   }
 
   const escalation = await createEscalation({

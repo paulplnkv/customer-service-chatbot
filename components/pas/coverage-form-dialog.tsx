@@ -21,7 +21,7 @@ import {
 import {
   createCoverageAction,
   updateCoverageAction,
-} from "@/app/pas/actions";
+} from "@/app/(internal)/pas/actions";
 
 const COVERAGE_TYPES = [
   "liability",

@@ -3,19 +3,17 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { MessageSquarePlus, Trash2 } from "lucide-react";
-import { formatRelativeTime } from "@/lib/utils/relative-time";
+import { Plus, MessageSquare, Trash2 } from "lucide-react";
 import {
   Sidebar,
-  SidebarContent,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarMenuAction,
-  SidebarGroup,
-  SidebarGroupContent,
+  SidebarContent,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/brand";
+import { authClient } from "@/lib/auth-client";
+import { AuthDialog, type AuthMode } from "@/components/auth-dialog";
 
 type Conversation = {
   id: string;
@@ -47,6 +45,15 @@ export function ChatSidebar({
     return () => window.removeEventListener("conversation-created", handler);
   }, []);
 
+  const handleNewChat = () => {
+    if (pathname.startsWith("/c/")) {
+      router.push("/");
+    } else {
+      window.history.replaceState(null, "", "/");
+      window.dispatchEvent(new CustomEvent("new-chat"));
+    }
+  };
+
   const handleDelete = async (e: React.MouseEvent, conversationId: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -68,63 +75,141 @@ export function ChatSidebar({
   };
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => {
-                if (pathname.startsWith("/c/")) {
-                  router.push("/");
-                } else {
-                  window.history.replaceState(null, "", "/");
-                  window.dispatchEvent(new CustomEvent("new-chat"));
-                }
-              }}
-            >
-              <MessageSquarePlus className="size-4" />
-              <span>New Chat</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+    <Sidebar
+      collapsible="none"
+      className="w-[260px] border-r border-rule bg-secondary/30"
+    >
+      <SidebarHeader className="border-b border-rule px-4 py-4">
+        <BrandMark size={24} />
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-2">
-              {conversations.map((conversation) => {
-                const isActive = pathname === `/c/${conversation.id}`;
-                const isDeleting = deletingId === conversation.id;
-                return (
-                  <SidebarMenuItem key={conversation.id}>
-                    <SidebarMenuButton
-                      render={<Link href={`/c/${conversation.id}`} />}
-                      isActive={isActive}
-                      className="h-auto py-2"
-                    >
-                      <div className="flex w-full flex-col gap-0.5 overflow-hidden">
-                        <span className="truncate text-sm">
-                          {conversation.title || "New conversation"}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatRelativeTime(new Date(conversation.updatedAt))}
-                        </span>
-                      </div>
-                    </SidebarMenuButton>
-                    <SidebarMenuAction
-                      onClick={(e) => handleDelete(e, conversation.id)}
-                      disabled={isDeleting}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </SidebarMenuAction>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+
+      <SidebarContent className="gap-0 px-2">
+        <div className="px-1 pt-3">
+          <button
+            onClick={handleNewChat}
+            className="inline-flex w-full items-center gap-2 rounded-md border border-rule bg-paper px-3 py-2 text-[13px] transition-colors hover:bg-secondary"
+          >
+            <Plus size={14} /> New chat
+          </button>
+        </div>
+        <div className="label-eyebrow px-3 pt-4 text-muted-foreground">
+          History
+        </div>
+        <div className="flex flex-col px-0 pt-1">
+          {conversations.length === 0 && (
+            <div className="px-3 py-3 text-[12px] text-muted-foreground">
+              No conversations yet.
+            </div>
+          )}
+          {conversations.map((conversation) => {
+            const isActive = pathname === `/c/${conversation.id}`;
+            const isDeleting = deletingId === conversation.id;
+            return (
+              <Link
+                key={conversation.id}
+                href={`/c/${conversation.id}`}
+                className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] ${
+                  isActive
+                    ? "bg-secondary text-ink"
+                    : "text-ink/80 hover:bg-secondary/70"
+                }`}
+              >
+                <MessageSquare
+                  size={13}
+                  className="shrink-0 text-muted-foreground"
+                />
+                <span className="flex-1 truncate">
+                  {conversation.title || "New conversation"}
+                </span>
+                <button
+                  onClick={(e) => handleDelete(e, conversation.id)}
+                  disabled={isDeleting}
+                  className="text-muted-foreground opacity-0 hover:text-ink group-hover:opacity-100"
+                  aria-label="Delete"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </Link>
+            );
+          })}
+        </div>
       </SidebarContent>
+
+      <SidebarFooter className="border-t border-rule p-3">
+        <AuthFooter />
+      </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function AuthFooter() {
+  const { data: session, isPending } = authClient.useSession();
+  const [mounted, setMounted] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setAuthMode("in");
+    window.addEventListener("open-auth", handler);
+    return () => window.removeEventListener("open-auth", handler);
+  }, []);
+
+  if (!mounted || isPending) {
+    return <div className="h-9" />;
+  }
+
+  if (session) {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-ink text-[11px] font-medium text-paper">
+            {session.user.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[12.5px]">{session.user.name}</div>
+            <div className="truncate text-[11px] text-muted-foreground">
+              {session.user.email}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={async () => {
+            await authClient.signOut();
+            window.location.href = "/sign-in";
+          }}
+          className="text-[11.5px] text-muted-foreground hover:text-ink hover:underline"
+        >
+          Sign out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Button
+          onClick={() => setAuthMode("in")}
+          className="h-9 w-full text-[13px]"
+        >
+          Sign In
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => setAuthMode("up")}
+          className="h-9 w-full border-rule text-[13px]"
+        >
+          Sign Up
+        </Button>
+      </div>
+      <AuthDialog
+        mode={authMode}
+        onClose={() => setAuthMode(null)}
+        onSwitch={(m) => setAuthMode(m)}
+      />
+    </>
   );
 }

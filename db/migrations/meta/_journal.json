@@ -22,6 +22,27 @@
       "when": 1774542939706,
       "tag": "0002_simple_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781180956249,
+      "tag": "0003_odd_nightmare",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781203806097,
+      "tag": "0004_grey_thunderbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781481600000,
+      "tag": "0005_hybrid_search",
+      "breakpoints": true
     }
   ]
 }

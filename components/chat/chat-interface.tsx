@@ -1,30 +1,17 @@
 "use client";
 
 import { useChat, type UIMessage } from "@ai-sdk/react";
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import { useEffect, useMemo, useCallback, useState, Fragment } from "react";
+import { DefaultChatTransport } from "ai";
+import { useEffect, useMemo, useCallback, useState, useRef, Fragment } from "react";
 
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import {
-  Message,
-  MessageContent,
-  MessageResponse,
-  MessageActions,
-  MessageAction,
-} from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputTextarea,
-  PromptInputSubmit,
-  type PromptInputMessage,
-} from "@/components/ai-elements/prompt-input";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+import { MessageResponse } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { RefreshCcwIcon, CopyIcon, ShieldCheck } from "lucide-react";
+import { ArrowUp, Bot, User as UserIcon, RefreshCcw, Copy } from "lucide-react";
 import { EscalationConfirmation } from "@/components/chat/escalation-confirmation";
 import { authClient } from "@/lib/auth-client";
 
@@ -42,30 +29,26 @@ const toolLabels: Record<string, string> = {
 };
 
 const suggestions = [
-  "What types of coverage are available?",
+  "What types of aviation coverage are available?",
   "How do I file a claim?",
-  "What's the status of my policy and vehicles?",
+  "What's the status of my policy and aircraft?",
   "My claim was denied and I need to speak with someone",
 ];
 
 export function ChatInterface({
   conversationId,
   initialMessages,
-  escalation,
 }: {
   conversationId?: string;
   initialMessages?: UIMessage[];
-  escalation?: { reason: string; status: string };
 }) {
   const hasNavigated = useMemo(() => ({ current: !!conversationId }), [conversationId]);
   const [input, setInput] = useState("");
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: session, isPending: sessionPending } = authClient.useSession();
-  const greeting = sessionPending
-    ? "Hello!"
-    : session?.user?.name
-      ? `Hello, ${session.user.name}!`
-      : "Hello!";
+  const firstName = session?.user?.name?.split(" ")[0];
+  const isAnonymous = !sessionPending && !session?.user;
 
   const [chatId, setChatId] = useState(
     () => conversationId ?? crypto.randomUUID()
@@ -88,7 +71,6 @@ export function ChatInterface({
     id: chatId,
     messages: initialMessages,
     transport,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onFinish: useCallback(() => { }, []),
   });
 
@@ -114,16 +96,14 @@ export function ChatInterface({
     return () => window.removeEventListener("new-chat", handler);
   }, [setMessages, hasNavigated]);
 
-  const handleSubmit = (message: PromptInputMessage) => {
-    if (message.text.trim()) {
-      sendMessage({ text: message.text });
-      setInput("");
-    }
-  };
+  const busy = status === "streaming" || status === "submitted";
 
-  const handleSuggestionClick = (suggestion: string) => {
-    sendMessage({ text: suggestion });
-  };
+  function send(text: string) {
+    const t = text.trim();
+    if (!t || busy) return;
+    sendMessage({ text: t });
+    setInput("");
+  }
 
   const updateEscalationToolPart = useCallback(
     (toolCallId: string, output: string) => {
@@ -156,13 +136,17 @@ export function ChatInterface({
   );
 
   const handleEscalationConfirm = useCallback(
-    async (toolCallId: string, reason: string) => {
+    async (toolCallId: string, reason: string, email?: string) => {
       updateEscalationToolPart(toolCallId, "confirmed");
       try {
         const res = await fetch("/api/escalations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId: chatId, reason }),
+          body: JSON.stringify({
+            conversationId: chatId,
+            reason,
+            ...(email ? { customerEmail: email } : {}),
+          }),
         });
         if (!res.ok) {
           console.error("Escalation request failed:", res.status);
@@ -181,130 +165,170 @@ export function ChatInterface({
     [updateEscalationToolPart]
   );
 
+  const empty = messages.length === 0;
+
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-paper">
       <Conversation className="flex-1">
-        <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-6">
-          <Message from="assistant">
-            <MessageContent>
-              <div className="space-y-3 text-sm">
-                <p>
-                  {greeting} I&apos;m the Pinnacle Home &amp; Auto virtual assistant
-                  — an AI-powered chatbot. I can help you with your policy
-                  status, billing information, claims, and general questions
-                  about our products.
-                </p>
-                <p className="text-muted-foreground">
-                  Please note: I am an AI and may not be able to assist with
-                  all requests. For complex or sensitive matters, please
-                  contact our team directly at{" "}
-                  <a
-                    href="mailto:support@pinnaclehomeauto.com"
-                    className="underline text-primary"
+        <ConversationContent className="mx-auto w-full max-w-[900px] gap-5 px-6 pb-8 pt-8">
+          {empty ? (
+            <div>
+              <p className="text-[15px] leading-relaxed text-ink">
+                Hello! I&apos;m the STARR Aviation Insurance virtual assistant — an
+                AI-powered chatbot. I can help you with your aircraft policy,
+                coverage and endorsements, billing, claims, and general questions
+                about our general aviation products.
+              </p>
+              <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground">
+                Please note: I am an AI and may not be able to assist with all
+                requests. For complex or sensitive matters, please contact our
+                team directly at{" "}
+                <a
+                  href="mailto:support@str-aviation.example"
+                  className="text-ink underline underline-offset-2"
+                >
+                  support@str-aviation.example
+                </a>{" "}
+                or call our 24/7 aviation claims line{" "}
+                <a
+                  href="tel:1-800-555-0147"
+                  className="text-ink underline underline-offset-2"
+                >
+                  1-800-555-0147
+                </a>
+                .
+              </p>
+              <h2 className="mt-8 text-[15px] font-semibold text-ink">
+                {isAnonymous
+                  ? "How can I help you today?"
+                  : `Hello ${firstName ?? "there"} — how can I help today?`}
+              </h2>
+              {isAnonymous && (
+                <p className="mt-8 text-[12px] text-muted-foreground">
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("open-auth"))
+                    }
+                    className="text-ink underline underline-offset-4"
                   >
-                    support@pinnaclehomeauto.com
-                  </a>{" "}
-                  or call{" "}
-                  <a
-                    href="tel:1-800-PINNACLE"
-                    className="underline text-primary"
-                  >
-                    1-800-PINNACLE
-                  </a>{" "}
-                  (Mon–Fri, 9am–6pm).
+                    Sign in
+                  </button>{" "}
+                  to ask about your own policies, aircraft, and claims.
                 </p>
-                <p className="font-medium">How can I help you today?</p>
-              </div>
-            </MessageContent>
-          </Message>
-          {messages.length === 0 ? (
-            <Suggestions className="justify-center gap-2 pt-2">
-              {suggestions.map((s) => (
-                <Suggestion
-                  key={s}
-                  suggestion={s}
-                  onClick={handleSuggestionClick}
-                  className="text-xs"
-                />
-              ))}
-            </Suggestions>
+              )}
+            </div>
           ) : (
             messages.map((message, messageIndex) => (
               <Fragment key={message.id}>
                 {message.parts.map((part, i) => {
                   switch (part.type) {
                     case "text": {
+                      if (message.role === "user") {
+                        return (
+                          <div
+                            key={`${message.id}-${i}`}
+                            className="flex items-start justify-end gap-3"
+                          >
+                            <div className="max-w-[78%] whitespace-pre-wrap rounded-md bg-ink px-3.5 py-2.5 text-[14px] leading-relaxed text-paper">
+                              {part.text}
+                            </div>
+                            <span className="mt-1 text-muted-foreground">
+                              <UserIcon size={14} />
+                            </span>
+                          </div>
+                        );
+                      }
                       const isLastAssistant =
                         message.role === "assistant" &&
                         messageIndex === messages.length - 1;
                       return (
-                        <Fragment key={`${message.id}-${i}`}>
-                          <Message from={message.role}>
-                            <MessageContent>
-                              <MessageResponse>{part.text}</MessageResponse>
-                            </MessageContent>
-                          </Message>
-                          {isLastAssistant && status !== "streaming" && (
-                            <MessageActions className="-mt-4">
-                              <MessageAction
-                                onClick={() => regenerate()}
-                                label="Retry"
-                              >
-                                <RefreshCcwIcon className="size-3" />
-                              </MessageAction>
-                              <MessageAction
-                                onClick={() =>
-                                  navigator.clipboard.writeText(part.text)
-                                }
-                                label="Copy"
-                              >
-                                <CopyIcon className="size-3" />
-                              </MessageAction>
-                            </MessageActions>
-                          )}
-                        </Fragment>
+                        <div
+                          key={`${message.id}-${i}`}
+                          className="flex items-start gap-3"
+                        >
+                          <span className="mt-1 text-muted-foreground">
+                            <Bot size={14} />
+                          </span>
+                          <div className="max-w-[78%] flex-1">
+                            <MessageResponse className="text-[14px] leading-relaxed">
+                              {part.text}
+                            </MessageResponse>
+                            {isLastAssistant && status !== "streaming" && (
+                              <div className="mt-2 flex items-center gap-1">
+                                <button
+                                  onClick={() => regenerate()}
+                                  aria-label="Retry"
+                                  className="p-1 text-muted-foreground hover:text-ink"
+                                >
+                                  <RefreshCcw size={13} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    navigator.clipboard.writeText(part.text)
+                                  }
+                                  aria-label="Copy"
+                                  className="p-1 text-muted-foreground hover:text-ink"
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       );
                     }
                     case "tool-escalateToHuman": {
-                      const escalation = part as EscalationToolPart;
+                      const esc = part as EscalationToolPart;
                       const reason =
-                        escalation.state === "input-available" || escalation.state === "output-available"
-                          ? escalation.input.reason
+                        esc.state === "input-available" ||
+                        esc.state === "output-available"
+                          ? esc.input.reason
                           : "Connecting you with a human agent...";
-                      const toolCallId = escalation.toolCallId;
+                      const toolCallId = esc.toolCallId;
                       return (
-                        <div key={`${message.id}-${i}`} className="w-full max-w-md">
-                          <EscalationConfirmation
-                            reason={reason}
-                            state={escalation.state}
-                            output={escalation.state === "output-available" ? String(escalation.output) : undefined}
-                            onConfirm={() => handleEscalationConfirm(toolCallId, reason)}
-                            onDismiss={() => handleEscalationDismiss(toolCallId)}
-                          />
+                        <div
+                          key={`${message.id}-${i}`}
+                          className="flex items-start gap-3"
+                        >
+                          <span className="mt-1 text-muted-foreground">
+                            <Bot size={14} />
+                          </span>
+                          <div className="max-w-md flex-1">
+                            <EscalationConfirmation
+                              reason={reason}
+                              state={esc.state}
+                              output={
+                                esc.state === "output-available"
+                                  ? String(esc.output)
+                                  : undefined
+                              }
+                              isAnonymous={isAnonymous}
+                              onConfirm={(email) =>
+                                handleEscalationConfirm(toolCallId, reason, email)
+                              }
+                              onDismiss={() => handleEscalationDismiss(toolCallId)}
+                            />
+                          </div>
                         </div>
                       );
                     }
                     default: {
-                      if (
-                        part.type.startsWith("tool-") &&
-                        "state" in part
-                      ) {
+                      if (part.type.startsWith("tool-") && "state" in part) {
                         const toolName = part.type.replace("tool-", "");
-                        const label =
-                          toolLabels[toolName] ?? toolName;
-
-                        if (part.state === "output-available") {
-                          return null;
-                        }
-
+                        const label = toolLabels[toolName] ?? toolName;
+                        if (part.state === "output-available") return null;
                         return (
-                          <Message key={`${message.id}-${i}`} from="assistant">
-                            <MessageContent>
-                              <Shimmer className="text-sm" duration={1.5}>
-                                {`${label}...`}
-                              </Shimmer>
-                            </MessageContent>
-                          </Message>
+                          <div
+                            key={`${message.id}-${i}`}
+                            className="flex items-start gap-3"
+                          >
+                            <span className="mt-1 text-muted-foreground">
+                              <Bot size={14} />
+                            </span>
+                            <Shimmer className="text-[14px]" duration={1.5}>
+                              {`${label}...`}
+                            </Shimmer>
+                          </div>
                         );
                       }
                       return null;
@@ -314,20 +338,7 @@ export function ChatInterface({
               </Fragment>
             ))
           )}
-          {escalation &&
-            !messages.some((m) =>
-              m.parts.some((p) => p.type === "tool-escalateToHuman")
-            ) && (
-              <div className="w-full max-w-md">
-                <EscalationConfirmation
-                  reason={escalation.reason}
-                  state="output-available"
-                  output="confirmed"
-                  onConfirm={() => { }}
-                  onDismiss={() => { }}
-                />
-              </div>
-            )}
+
           {(status === "submitted" ||
             (status !== "ready" &&
               messages.length > 0 &&
@@ -340,35 +351,66 @@ export function ChatInterface({
               !messages[messages.length - 1].parts.some(
                 (p) => p.type === "text"
               ))) && (
-            <Message from="assistant">
-              <MessageContent>
-                <Shimmer className="text-sm" duration={1.5}>
-                  Thinking...
-                </Shimmer>
-              </MessageContent>
-            </Message>
+            <div className="flex items-start gap-3">
+              <span className="mt-1 text-muted-foreground">
+                <Bot size={14} />
+              </span>
+              <Shimmer className="text-[14px]" duration={1.5}>
+                Thinking…
+              </Shimmer>
+            </div>
           )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="shrink-0 border-t bg-background px-4 pb-4 pt-3">
-        <PromptInput
-          onSubmit={handleSubmit}
-          className="mx-auto w-full max-w-3xl relative"
-        >
-          <PromptInputTextarea
-            value={input}
-            placeholder="Ask about your policy, claims, or coverage..."
-            onChange={(e) => setInput(e.currentTarget.value)}
-            className="pr-12"
-          />
-          <PromptInputSubmit
-            status={status === "streaming" ? "streaming" : "ready"}
-            disabled={!input.trim()}
-            className="absolute bottom-1 right-1"
-          />
-        </PromptInput>
+      <div className="shrink-0 border-t border-rule bg-paper">
+        <div className="mx-auto max-w-[900px] px-6 pt-4">
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onClick={() => send(s)}
+                disabled={busy}
+                className="rounded-full border border-rule px-3.5 py-1.5 text-[12.5px] text-ink transition-colors hover:bg-secondary disabled:opacity-50"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mx-auto max-w-[900px] px-6 py-5">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              send(input);
+            }}
+            className="relative"
+          >
+            <textarea
+              ref={taRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send(input);
+                }
+              }}
+              placeholder="Ask about your policy, claims, or coverage…"
+              rows={2}
+              className="max-h-40 min-h-[72px] w-full resize-none rounded-md border border-rule bg-secondary/50 px-3.5 py-3 pr-14 text-[14px] text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || busy}
+              aria-label="Send"
+              className="absolute bottom-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-md bg-ink text-paper transition-opacity hover:opacity-90 disabled:opacity-30"
+            >
+              <ArrowUp size={16} />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

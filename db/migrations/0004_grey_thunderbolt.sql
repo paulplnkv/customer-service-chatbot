@@ -1,0 +1,1 @@
+ALTER TABLE "coverages" ALTER COLUMN "limit_amount" SET DATA TYPE numeric(14, 2);

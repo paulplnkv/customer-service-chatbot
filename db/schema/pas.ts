@@ -37,17 +37,19 @@ export const policies = pgTable("policies", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const vehicles = pgTable("vehicles", {
+export const aircraft = pgTable("aircraft", {
   id: uuid().primaryKey().defaultRandom(),
   policyId: uuid("policy_id")
     .notNull()
     .references(() => policies.id),
+  registration: varchar({ length: 12 }).notNull(),
+  serialNumber: varchar("serial_number", { length: 50 }).notNull(),
+  year: integer().notNull(),
   make: varchar({ length: 100 }).notNull(),
   model: varchar({ length: 100 }).notNull(),
-  year: integer().notNull(),
-  vin: varchar({ length: 17 }).notNull(),
-  licensePlate: varchar("license_plate", { length: 20 }),
-  color: varchar({ length: 50 }),
+  hullValue: numeric("hull_value", { precision: 12, scale: 2 }),
+  seats: integer(),
+  primaryUse: varchar("primary_use", { length: 100 }),
 });
 
 export const claims = pgTable("claims", {
@@ -72,7 +74,7 @@ export const coverages = pgTable("coverages", {
     .notNull()
     .references(() => policies.id),
   type: varchar({ length: 50 }).notNull(),
-  limitAmount: numeric("limit_amount", { precision: 10, scale: 2 }).notNull(),
+  limitAmount: numeric("limit_amount", { precision: 14, scale: 2 }).notNull(),
   premium: numeric({ precision: 10, scale: 2 }).notNull(),
 });
 
@@ -87,14 +89,14 @@ export const policiesRelations = relations(policies, ({ one, many }) => ({
     fields: [policies.customerId],
     references: [customers.id],
   }),
-  vehicles: many(vehicles),
+  aircraft: many(aircraft),
   claims: many(claims),
   coverages: many(coverages),
 }));
 
-export const vehiclesRelations = relations(vehicles, ({ one }) => ({
+export const aircraftRelations = relations(aircraft, ({ one }) => ({
   policy: one(policies, {
-    fields: [vehicles.policyId],
+    fields: [aircraft.policyId],
     references: [policies.id],
   }),
 }));
