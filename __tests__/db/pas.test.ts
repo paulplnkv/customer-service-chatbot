@@ -48,7 +48,7 @@ describe("PAS query functions", () => {
       const firstPolicy = data!.policies[0];
       expect(firstPolicy.policyNumber).toBeTruthy();
       expect(firstPolicy.status).toBeTruthy();
-      expect(Array.isArray(firstPolicy.aircraft)).toBe(true);
+      expect(Array.isArray(firstPolicy.vehicles)).toBe(true);
       expect(Array.isArray(firstPolicy.claims)).toBe(true);
       expect(Array.isArray(firstPolicy.coverages)).toBe(true);
     });

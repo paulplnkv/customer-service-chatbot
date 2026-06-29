@@ -2,7 +2,7 @@ import { db } from "@/db";
 import {
   customers,
   policies,
-  aircraft,
+  vehicles,
   claims,
   coverages,
 } from "@/db/schema/pas";
@@ -48,13 +48,13 @@ export async function getAllCustomersWithSummary() {
 
   const policyIds = allPolicies.map((p) => p.id);
 
-  const [allAircraft, allClaims, allCoverages] =
+  const [allVehicles, allClaims, allCoverages] =
     policyIds.length > 0
       ? await Promise.all([
           db
             .select()
-            .from(aircraft)
-            .where(inArray(aircraft.policyId, policyIds)),
+            .from(vehicles)
+            .where(inArray(vehicles.policyId, policyIds)),
           db
             .select()
             .from(claims)
@@ -88,18 +88,18 @@ export async function getAllCustomersWithSummary() {
         endDate: policy.endDate,
         premium: policy.premium,
         deductible: policy.deductible,
-        aircraft: allAircraft
-          .filter((a) => a.policyId === policy.id)
-          .map((a) => ({
-            id: a.id,
-            registration: a.registration,
-            serialNumber: a.serialNumber,
-            year: a.year,
-            make: a.make,
-            model: a.model,
-            hullValue: a.hullValue,
-            seats: a.seats,
-            primaryUse: a.primaryUse,
+        vehicles: allVehicles
+          .filter((v) => v.policyId === policy.id)
+          .map((v) => ({
+            id: v.id,
+            plate: v.plate,
+            vin: v.vin,
+            year: v.year,
+            make: v.make,
+            model: v.model,
+            value: v.value,
+            seats: v.seats,
+            use: v.use,
           })),
         claims: allClaims
           .filter((c) => c.policyId === policy.id)
@@ -113,6 +113,8 @@ export async function getAllCustomersWithSummary() {
             dateOfIncident: c.dateOfIncident,
             dateFiled: c.dateFiled,
             dateResolved: c.dateResolved,
+            paymentDate: c.paymentDate,
+            paymentStatus: c.paymentStatus,
           })),
         coverages: allCoverages
           .filter((cv) => cv.policyId === policy.id)
@@ -172,43 +174,43 @@ export async function deletePolicy(policyId: string) {
   await db.transaction(async (tx) => {
     await tx.delete(coverages).where(eq(coverages.policyId, policyId));
     await tx.delete(claims).where(eq(claims.policyId, policyId));
-    await tx.delete(aircraft).where(eq(aircraft.policyId, policyId));
+    await tx.delete(vehicles).where(eq(vehicles.policyId, policyId));
     await tx.delete(policies).where(eq(policies.id, policyId));
   });
 }
 
-// --- Aircraft CRUD ---
+// --- Vehicle CRUD ---
 
-type AircraftData = {
-  registration: string;
-  serialNumber: string;
+type VehicleData = {
+  plate: string;
+  vin: string;
   year: number;
   make: string;
   model: string;
-  hullValue?: string | null;
+  value?: string | null;
   seats?: number | null;
-  primaryUse?: string | null;
+  use?: string | null;
 };
 
-export async function createAircraft(policyId: string, data: AircraftData) {
+export async function createVehicle(policyId: string, data: VehicleData) {
   const [result] = await db
-    .insert(aircraft)
+    .insert(vehicles)
     .values({ policyId, ...data })
     .returning();
   return result;
 }
 
-export async function updateAircraft(aircraftId: string, data: AircraftData) {
+export async function updateVehicle(vehicleId: string, data: VehicleData) {
   const [result] = await db
-    .update(aircraft)
+    .update(vehicles)
     .set(data)
-    .where(eq(aircraft.id, aircraftId))
+    .where(eq(vehicles.id, vehicleId))
     .returning();
   return result;
 }
 
-export async function deleteAircraft(aircraftId: string) {
-  await db.delete(aircraft).where(eq(aircraft.id, aircraftId));
+export async function deleteVehicle(vehicleId: string) {
+  await db.delete(vehicles).where(eq(vehicles.id, vehicleId));
 }
 
 // --- Claim CRUD ---
@@ -324,8 +326,8 @@ export async function getFullCustomerData(userId: string) {
     };
   }
 
-  const [allAircraft, allClaims, allCoverages] = await Promise.all([
-    db.select().from(aircraft).where(inArray(aircraft.policyId, policyIds)),
+  const [allVehicles, allClaims, allCoverages] = await Promise.all([
+    db.select().from(vehicles).where(inArray(vehicles.policyId, policyIds)),
     db.select().from(claims).where(inArray(claims.policyId, policyIds)),
     db.select().from(coverages).where(inArray(coverages.policyId, policyIds)),
   ]);
@@ -340,17 +342,17 @@ export async function getFullCustomerData(userId: string) {
       endDate: policy.endDate,
       premium: policy.premium,
       deductible: policy.deductible,
-      aircraft: allAircraft
-        .filter((a) => a.policyId === policy.id)
-        .map((a) => ({
-          registration: a.registration,
-          serialNumber: a.serialNumber,
-          year: a.year,
-          make: a.make,
-          model: a.model,
-          hullValue: a.hullValue,
-          seats: a.seats,
-          primaryUse: a.primaryUse,
+      vehicles: allVehicles
+        .filter((v) => v.policyId === policy.id)
+        .map((v) => ({
+          plate: v.plate,
+          vin: v.vin,
+          year: v.year,
+          make: v.make,
+          model: v.model,
+          value: v.value,
+          seats: v.seats,
+          use: v.use,
         })),
       claims: allClaims
         .filter((c) => c.policyId === policy.id)
@@ -363,6 +365,8 @@ export async function getFullCustomerData(userId: string) {
           dateOfIncident: c.dateOfIncident,
           dateFiled: c.dateFiled,
           dateResolved: c.dateResolved,
+          paymentDate: c.paymentDate,
+          paymentStatus: c.paymentStatus,
         })),
       coverages: allCoverages
         .filter((cv) => cv.policyId === policy.id)

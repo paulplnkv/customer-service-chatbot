@@ -4,15 +4,15 @@ export type CustomerSummary = Awaited<
   ReturnType<typeof getAllCustomersWithSummary>
 >[number];
 
-// Human labels for our policy-type slugs (mirrors the reference's policyType strings).
+// Human labels for our policy-type slugs.
 const POLICY_TYPE_LABELS: Record<string, string> = {
-  "ga-hull-liability": "GA Hull & Liability",
-  "part135-charter-fleet": "Part 135 Charter Fleet",
-  "aerospace-products-liability": "Aerospace Products Liability",
-  "fbo-airport-liability": "FBO / Airport Liability",
-  "uas-commercial": "UAS — Commercial",
-  "agricultural-aviation": "Agricultural Aviation",
-  "ga-fleet-flying-club": "GA Fleet — Flying Club",
+  "personal-auto": "Personal Auto",
+  "commercial-fleet": "Commercial Fleet",
+  "rideshare-auto": "Rideshare / Delivery Auto",
+  "classic-auto": "Classic & Collector Auto",
+  "high-value-auto": "High-Value Auto",
+  "small-fleet": "Small Business Fleet",
+  "multi-vehicle-package": "Multi-Vehicle Package",
 };
 
 export function policyTypeLabel(slug: string): string {
@@ -55,7 +55,7 @@ export type PolicyView = {
 // Derive the reference PolicyRow shape from a real customer summary.
 export function toPolicyView(c: CustomerSummary): PolicyView {
   const primary = c.policies[0];
-  const aircraft = c.policies.flatMap((p) => p.aircraft);
+  const vehicles = c.policies.flatMap((p) => p.vehicles);
   const allClaims = c.policies.flatMap((p) => p.claims);
   const limits = c.policies.flatMap((p) =>
     p.coverages.map((cv) => Number(cv.limitAmount ?? 0))
@@ -76,10 +76,10 @@ export function toPolicyView(c: CustomerSummary): PolicyView {
     policyType: primary ? policyTypeLabel(primary.type) : "—",
     policyCount: c.policies.length,
     activeCount: c.policies.filter((p) => p.status === "active").length,
-    insuredObjects: aircraft.map(
-      (a) => `${a.make} ${a.model} (${a.registration})`
+    insuredObjects: vehicles.map(
+      (v) => `${v.year} ${v.make} ${v.model} (${v.plate})`
     ),
-    limit: maxLimit ? `${formatCompactUsd(maxLimit)} CSL` : "—",
+    limit: maxLimit ? `${formatCompactUsd(maxLimit)} per accident` : "—",
     claims: allClaims.length,
     openClaims: allClaims.filter((cl) => !cl.dateResolved).length,
     premium: c.policies.reduce((s, p) => s + Number(p.premium ?? 0), 0),

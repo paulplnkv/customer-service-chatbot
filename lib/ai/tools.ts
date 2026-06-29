@@ -7,7 +7,7 @@ import { toPolicyView } from "@/lib/pas/policy-view";
 
 export const knowledgeBaseTool = tool({
   description:
-    "Search the STR Aviation Insurance knowledge base for relevant information. Use this tool to answer questions about aviation insurance topics like coverage packages, hull and liability, endorsements, billing, claims processes, policy terms, and FAQs — as well as questions about a specific customer's policy document details such as additional insured parties, loss payees, named insureds, exclusions, conditions, endorsements, pilot warranties, and specific coverage terms written into the policy. When the customer asks about additional insured or loss payees on their policy, ALWAYS call this tool with policyNumber set (obtained from getCustomerPolicyData first). When you already know the customer's policy number, pass it as 'policyNumber' to restrict the search to that specific policy document. Each result includes a 'source' field (e.g. 'STAR-GA-2024-00447') — cite it when answering.",
+    "Search the Sterling Auto Insurance knowledge base for relevant information. Use this tool to answer questions about auto insurance topics like coverage meanings (liability, collision, comprehensive, uninsured motorist, medical payments), deductibles, the claims process and payout timing, how to influence an in-review claim, billing, renewal and reinstatement, and denials and appeals — as well as questions about a specific customer's policy document details such as lienholders/additional interests, named insureds, exclusions, and specific coverage terms written into the policy. When the customer asks about details written into their own policy, ALWAYS call this tool with policyNumber set (obtained from getCustomerPolicyData first). When you already know the customer's policy number, pass it as 'policyNumber' to restrict the search to that specific policy document. Each result includes a 'source' field (e.g. 'STER-AUTO-2026-00100') — cite it when answering.",
   inputSchema: z.object({
     query: z
       .string()
@@ -16,7 +16,7 @@ export const knowledgeBaseTool = tool({
       .string()
       .optional()
       .describe(
-        "Optional policy number (e.g. 'STAR-GA-2024-00447') to restrict the search to that specific policy document. Use when the customer asks about details of their own policy."
+        "Optional policy number (e.g. 'STER-AUTO-2026-00100') to restrict the search to that specific policy document. Use when the customer asks about details of their own policy."
       ),
   }),
   execute: async ({ query, policyNumber }, options) => {
@@ -54,7 +54,7 @@ export const knowledgeBaseTool = tool({
 
 export const customerPolicyTool = tool({
   description:
-    "Retrieve the authenticated customer's aviation insurance policy data including policies, aircraft, claims, and coverages (structured PAS data). Use this tool when the user asks about their policy number, premium, aircraft on the policy, open claims, or coverage limits. This tool does NOT contain additional insured parties, loss payees, endorsement schedules, or the full policy document text — for those details, call searchKnowledgeBase with the policy number after calling this tool.",
+    "Retrieve the authenticated customer's auto insurance policy data including policies, vehicles, claims (with status, amount, payout date and status, and denial reasons), and coverages (structured data). Use this tool when the user asks about their policy number, premium, deductible, vehicles, claim status, when an approved payment will arrive, or coverage limits. This tool does NOT contain lienholders/additional interests or the full policy document text — for those details, call searchKnowledgeBase with the policy number after calling this tool.",
   inputSchema: z.object({
     reason: z
       .string()
@@ -89,7 +89,7 @@ export const customerPolicyTool = tool({
 
 export const escalateToHumanTool = tool({
   description:
-    "Escalate the conversation to a human agent. Use this when the customer explicitly asks to speak with a human, or when the issue is too complex for you to resolve (e.g., policy disputes, billing errors, complex claims). This will show the customer a confirmation prompt.",
+    "Escalate the conversation to a human claims/support agent. Use this when the customer explicitly asks to speak with a human, wants to dispute or appeal a denied claim, or when the issue is too complex for you to resolve (e.g., coverage disputes, billing errors, contested claims). This will show the customer a confirmation prompt.",
   inputSchema: z.object({
     reason: z
       .string()
@@ -145,13 +145,13 @@ export const escalationQueueTool = tool({
 
 export const portfolioTool = tool({
   description:
-    "Read the STR Aviation book of business — every policyholder with their policies, aircraft, claims, premium, and renewal dates. Use this for portfolio snapshots, renewals, exposure by aircraft type, open claims across the book, or named-account lookups.",
+    "Read the Sterling Auto customer book — every policyholder with their policies, vehicles, claims, premium, and renewal dates. Use this for book snapshots, renewals, open claims across the book, or named-customer lookups.",
   inputSchema: z.object({
     focus: z
       .string()
       .optional()
       .describe(
-        "Optional note on what the underwriter is asking about (e.g. 'renewals', 'rotorcraft', a policyholder name). The full portfolio is returned regardless."
+        "Optional note on what the agent is asking about (e.g. 'renewals', 'open claims', a customer name). The full book is returned regardless."
       ),
   }),
   execute: async () => {
@@ -176,7 +176,7 @@ export const portfolioTool = tool({
       summary: {
         policyholders: rows.length,
         totalPremium: rows.reduce((s, r) => s + r.premium, 0),
-        totalAircraft: rows.reduce((s, r) => s + r.insuredObjects.length, 0),
+        totalVehicles: rows.reduce((s, r) => s + r.insuredObjects.length, 0),
         openClaims: rows.reduce((s, r) => s + r.openClaims, 0),
       },
       policyholders,

@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "STARR — Starr Aviation Insurance",
-  description: "AI underwriting assistant for STARR Aviation Insurance policyholders",
+  title: "Sterling Auto Insurance",
+  description: "Sterling Auto Insurance app — manage your policy, claims, and payments with the Sterling assistant",
 };
 
 export default function RootLayout({

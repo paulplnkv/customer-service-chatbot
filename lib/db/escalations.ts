@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { escalations } from "@/db/schema/escalations";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export async function createEscalation(params: {
   conversationId: string;
@@ -30,7 +30,17 @@ export async function getAllEscalations() {
   return db
     .select()
     .from(escalations)
-    .orderBy(escalations.createdAt);
+    .orderBy(desc(escalations.createdAt));
+}
+
+export async function getEscalationById(id: string) {
+  const result = await db
+    .select()
+    .from(escalations)
+    .where(eq(escalations.id, id))
+    .limit(1);
+
+  return result[0] ?? null;
 }
 
 export async function getEscalationByConversationId(conversationId: string) {
@@ -38,7 +48,29 @@ export async function getEscalationByConversationId(conversationId: string) {
     .select()
     .from(escalations)
     .where(eq(escalations.conversationId, conversationId))
+    .orderBy(desc(escalations.createdAt))
     .limit(1);
 
   return result[0] ?? null;
+}
+
+// Record the support agent's reply and mark the escalation resolved. The
+// customer-facing recap is saved separately as an assistant message.
+export async function resolveEscalationWithResponse(params: {
+  id: string;
+  agentName: string;
+  agentResponse: string;
+}) {
+  const [escalation] = await db
+    .update(escalations)
+    .set({
+      agentName: params.agentName,
+      agentResponse: params.agentResponse,
+      status: "resolved",
+      resolvedAt: new Date(),
+    })
+    .where(eq(escalations.id, params.id))
+    .returning();
+
+  return escalation;
 }

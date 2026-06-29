@@ -14,12 +14,12 @@ import { MessageResponse } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 
 const SUGGESTIONS = [
-  "Give me a portfolio snapshot",
   "What's in the escalation queue?",
+  "Give me a customer book snapshot",
+  "Show me Alex Morgan's claims",
   "Which policies are up for renewal soon?",
-  "Show me our rotorcraft exposure",
   "Summarize open claims across the book",
-  "Draft an indication for a new Citation CJ4 operator",
+  "Draft a reply for the denied-claim escalation",
 ];
 
 export default function InternalAssistantPage() {
@@ -50,14 +50,14 @@ export default function InternalAssistantPage() {
   return (
     <section className="flex h-screen flex-col">
       <div className="border-b border-rule px-8 pb-4 pt-7">
-        <div className="label-eyebrow">Back office · Underwriter tools</div>
+        <div className="label-eyebrow">Support console · Agent tools</div>
         <h1 className="mt-0.5 flex items-center gap-2.5 font-display text-3xl">
           <Sparkles size={22} className="text-ink" />
-          AI assistant
+          AI copilot
         </h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
-          Ask about the book of business, named accounts, the escalation queue,
-          or draft underwriting indications.
+          Ask about the escalation queue, look up a customer&apos;s policy,
+          vehicles, and claims, or draft a reply to an escalated customer.
         </p>
       </div>
 
@@ -66,10 +66,10 @@ export default function InternalAssistantPage() {
           {empty ? (
             <div>
               <p className="text-[14px] leading-relaxed text-ink">
-                Hi — I&apos;m your internal STARR Aviation copilot. I can help you
-                reason over policy, claims, and escalation data, and draft
-                underwriting indications. I won&apos;t take any binding actions on
-                my own.
+                Hi — I&apos;m your internal Sterling Auto support copilot. I can
+                help you work the escalation queue, look up a customer&apos;s
+                policy, vehicles, and claims, and draft a reply to an escalated
+                customer. I won&apos;t take any binding actions on my own.
               </p>
               <p className="mt-6 text-[13px] text-muted-foreground">
                 Pick one of the suggested questions below, or ask anything.
@@ -162,7 +162,7 @@ export default function InternalAssistantPage() {
                   send(input);
                 }
               }}
-              placeholder="Ask about the portfolio, a policyholder, the escalation queue, renewals…"
+              placeholder="Ask about the escalation queue, a customer, claims, renewals…"
               rows={2}
               className="max-h-40 min-h-[72px] w-full resize-none rounded-md border border-rule bg-paper px-3.5 py-3 pr-14 text-[14px] text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />

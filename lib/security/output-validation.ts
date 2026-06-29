@@ -27,7 +27,7 @@ const ROLE_BREAKING_PATTERNS = [
   /ignore\s+(all\s+)?(previous|prior|my)\s+instructions/i,
 ];
 
-// Patterns indicating the response is about topics outside aviation insurance
+// Patterns indicating the response is about topics outside auto insurance
 const OFF_TOPIC_PATTERNS = [
   /\bbased\s+on\s+my\s+medical\s+knowledge\b/i,
   /\bhere'?s?\s+a\s+(?:python|javascript|java|c\+\+|ruby|bash)\s+script\b/i,
@@ -37,7 +37,7 @@ const OFF_TOPIC_PATTERNS = [
 ];
 
 const REPLACEMENT_MESSAGE =
-  "I'm sorry, but I can only assist with insurance topics such as policies, claims, coverage, and aircraft. How can I help you with your STR Aviation Insurance needs?";
+  "I'm sorry, but I can only assist with auto insurance topics such as policies, claims, coverage, billing, and payments. How can I help you with your Sterling Auto Insurance needs?";
 
 export function validateOutput(text: string): ValidationResult {
   const violations: Set<ViolationType> = new Set();

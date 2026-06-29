@@ -13,6 +13,9 @@ export const escalations = pgTable("escalations", {
   chatSummary: text("chat_summary"),
   reason: text(),
   status: varchar({ length: 20 }).notNull().default("pending"),
+  // Support-agent reply that the assistant turns into a recap for the customer.
+  agentName: varchar("agent_name", { length: 255 }),
+  agentResponse: text("agent_response"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at"),
 });

@@ -18,8 +18,8 @@ export function BrandMark({ size = 28 }: { size?: number }) {
         </text>
       </svg>
       <div className="leading-none">
-        <div className="font-display text-[19px]">STARR</div>
-        <div className="label-eyebrow mt-0.5">Aviation Insurance</div>
+        <div className="font-display text-[19px]">Sterling</div>
+        <div className="label-eyebrow mt-0.5">Auto Insurance</div>
       </div>
     </div>
   );
@@ -27,7 +27,7 @@ export function BrandMark({ size = 28 }: { size?: number }) {
 
 export function BrandLink() {
   return (
-    <Link href="/" aria-label="STARR Aviation Insurance — home">
+    <Link href="/" aria-label="Sterling Auto Insurance — home">
       <BrandMark />
     </Link>
   );

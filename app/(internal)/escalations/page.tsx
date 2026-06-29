@@ -1,9 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { getAllEscalations } from "@/lib/db/escalations";
-
-const contactLinkClass =
-  "inline-flex h-7 items-center rounded-md border border-rule bg-background px-2.5 text-[0.8rem] font-medium transition-colors hover:bg-muted";
 
 export default async function EscalationsPage() {
   const escalations = await getAllEscalations();
@@ -28,14 +26,13 @@ export default async function EscalationsPage() {
               <th className="w-[20%]">Reason</th>
               <th>Summary</th>
               <th className="w-[120px]">Date</th>
-              <th className="w-[180px]">Contact</th>
             </tr>
           </thead>
           <tbody>
             {escalations.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={4}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   No escalations yet.
@@ -48,12 +45,26 @@ export default async function EscalationsPage() {
                 className="border-t border-rule align-top hover:bg-secondary/40"
               >
                 <td className="align-top">
-                  <div className="font-medium">
-                    {esc.customerName ?? (
-                      <span className="italic text-muted-foreground">
-                        Anonymous
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/escalations/${esc.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {esc.customerName ?? (
+                        <span className="italic text-muted-foreground">
+                          Anonymous
+                        </span>
+                      )}
+                    </Link>
+                    <span
+                      className={`rounded-sm border px-1.5 py-0.5 text-[10px] ${
+                        esc.status === "resolved"
+                          ? "border-emerald-600/40 bg-emerald-600/15 text-ink"
+                          : "border-amber-500/40 bg-amber-500/15 text-ink"
+                      }`}
+                    >
+                      {esc.status === "resolved" ? "Resolved" : "Pending"}
+                    </span>
                   </div>
                   {esc.customerEmail && (
                     <div className="text-[11px] text-muted-foreground">
@@ -71,22 +82,6 @@ export default async function EscalationsPage() {
                     day: "numeric",
                     year: "numeric",
                   })}
-                </td>
-                <td className="align-top">
-                  {esc.customerEmail ? (
-                    <div className="flex flex-wrap gap-2">
-                      <a
-                        className={contactLinkClass}
-                        href={`mailto:${esc.customerEmail}?subject=${encodeURIComponent(
-                          `STARR Aviation — ${esc.reason}`
-                        )}`}
-                      >
-                        Email
-                      </a>
-                    </div>
-                  ) : (
-                    <span className="text-[12px] text-muted-foreground">—</span>
-                  )}
                 </td>
               </tr>
             ))}

@@ -12,12 +12,12 @@ export default async function PasPage() {
     <div className="px-8 py-7">
       <div className="flex items-baseline justify-between border-b border-rule pb-4">
         <div>
-          <div className="label-eyebrow">System of record · PaS</div>
-          <h1 className="mt-0.5 font-display text-3xl">Policies</h1>
+          <div className="label-eyebrow">System of record</div>
+          <h1 className="mt-0.5 font-display text-3xl">Customers</h1>
         </div>
         <div className="text-[13px] text-muted-foreground">
           <span className="font-medium text-ink">{rows.length}</span>{" "}
-          policyholder{rows.length !== 1 && "s"}
+          customer{rows.length !== 1 && "s"}
         </div>
       </div>
 

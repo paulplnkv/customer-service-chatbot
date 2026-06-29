@@ -109,10 +109,10 @@ export default async function PolicyDetailPage({
       </div>
 
       <section className="mt-5 rounded-md border border-rule bg-card p-5">
-        <div className="label-eyebrow">Insured objects</div>
+        <div className="label-eyebrow">Insured vehicles</div>
         {p.insuredObjects.length === 0 ? (
           <p className="mt-2 text-[13px] text-muted-foreground">
-            No scheduled aircraft on this account.
+            No vehicles on this account.
           </p>
         ) : (
           <ul className="mt-2 divide-y divide-rule">
@@ -132,11 +132,11 @@ export default async function PolicyDetailPage({
       </section>
 
       <section className="mt-5 rounded-md border border-rule bg-card p-5">
-        <div className="label-eyebrow">Underwriting notes</div>
+        <div className="label-eyebrow">Account notes</div>
         <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
           {p.kind === "Corporate"
-            ? `Operator-level account. Risk profile aligned with ${p.policyType.toLowerCase()} class; loss ratio reviewed at last renewal.`
-            : `Owner-flown account. Pilot logbook and currency on file; risk profile standard for the ${p.policyType.toLowerCase()} class.`}
+            ? `Commercial account. ${p.policyType} coverage; loss history reviewed at last renewal.`
+            : `Personal auto account. ${p.policyType} coverage; standard driver profile on file.`}
         </p>
       </section>
     </div>

@@ -11,10 +11,10 @@ import {
 import { BrandMark } from "@/components/brand";
 
 const NAV = [
-  { to: "/assistant", label: "AI assistant", icon: Sparkles },
+  { to: "/assistant", label: "AI copilot", icon: Sparkles },
   { to: "/escalations", label: "Escalations", icon: AlertCircle },
   { to: "/kb", label: "Knowledge base", icon: BookOpen },
-  { to: "/pas", label: "Policies", icon: Users },
+  { to: "/pas", label: "Customers", icon: Users },
 ] as const;
 
 export function InternalSidebar({ pending }: { pending: number }) {
@@ -31,7 +31,7 @@ export function InternalSidebar({ pending }: { pending: number }) {
         </Link>
       </div>
 
-      <div className="label-eyebrow px-5 pt-3">Back office</div>
+      <div className="label-eyebrow px-5 pt-3">Support console</div>
 
       <nav className="flex-1 p-2">
         {NAV.map((n) => {

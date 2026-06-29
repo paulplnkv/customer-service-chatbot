@@ -12,23 +12,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  createAircraftAction,
-  updateAircraftAction,
+  createVehicleAction,
+  updateVehicleAction,
 } from "@/app/(internal)/pas/actions";
 
-type AircraftData = {
+type VehicleData = {
   id: string;
-  registration: string;
-  serialNumber: string;
+  plate: string;
+  vin: string;
   year: number;
   make: string;
   model: string;
-  hullValue: string | null;
+  value: string | null;
   seats: number | null;
-  primaryUse: string | null;
+  use: string | null;
 };
 
-export function AircraftFormDialog({
+export function VehicleFormDialog({
   open,
   onOpenChange,
   policyId,
@@ -37,7 +37,7 @@ export function AircraftFormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   policyId: string;
-  initial?: AircraftData | null;
+  initial?: VehicleData | null;
 }) {
   const isEdit = !!initial;
   const [loading, setLoading] = useState(false);
@@ -51,8 +51,8 @@ export function AircraftFormDialog({
     const formData = new FormData(e.currentTarget);
 
     const result = isEdit
-      ? await updateAircraftAction(initial.id, formData)
-      : await createAircraftAction(policyId, formData);
+      ? await updateVehicleAction(initial.id, formData)
+      : await createVehicleAction(policyId, formData);
 
     setLoading(false);
     if (result.success) {
@@ -74,33 +74,33 @@ export function AircraftFormDialog({
     >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Aircraft" : "Add Aircraft"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Vehicle" : "Add Vehicle"}</DialogTitle>
           <DialogDescription>
             {isEdit
-              ? "Update the aircraft details below."
-              : "Fill in the details to add an aircraft to this policy."}
+              ? "Update the vehicle details below."
+              : "Fill in the details to add a vehicle to this policy."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="registration">Registration (N-Number)</Label>
+              <Label htmlFor="plate">License Plate</Label>
               <Input
-                id="registration"
-                name="registration"
-                defaultValue={initial?.registration ?? ""}
+                id="plate"
+                name="plate"
+                defaultValue={initial?.plate ?? ""}
                 required
-                maxLength={12}
+                maxLength={10}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="serialNumber">Serial Number</Label>
+              <Label htmlFor="vin">VIN</Label>
               <Input
-                id="serialNumber"
-                name="serialNumber"
-                defaultValue={initial?.serialNumber ?? ""}
+                id="vin"
+                name="vin"
+                defaultValue={initial?.vin ?? ""}
                 required
-                maxLength={50}
+                maxLength={17}
               />
             </div>
             <div className="space-y-1.5">
@@ -134,13 +134,13 @@ export function AircraftFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="hullValue">Hull Value</Label>
+              <Label htmlFor="value">Vehicle Value</Label>
               <Input
-                id="hullValue"
-                name="hullValue"
+                id="value"
+                name="value"
                 type="number"
                 step="0.01"
-                defaultValue={initial?.hullValue ?? ""}
+                defaultValue={initial?.value ?? ""}
               />
             </div>
             <div className="space-y-1.5">
@@ -153,11 +153,11 @@ export function AircraftFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="primaryUse">Primary Use</Label>
+              <Label htmlFor="use">Primary Use</Label>
               <Input
-                id="primaryUse"
-                name="primaryUse"
-                defaultValue={initial?.primaryUse ?? ""}
+                id="use"
+                name="use"
+                defaultValue={initial?.use ?? ""}
                 maxLength={100}
               />
             </div>
