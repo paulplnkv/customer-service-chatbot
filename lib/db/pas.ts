@@ -5,8 +5,42 @@ import {
   vehicles,
   claims,
   coverages,
+  claimDocuments,
 } from "@/db/schema/pas";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, asc } from "drizzle-orm";
+
+// Photos / documents attached to a set of claims, keyed by claim id.
+async function getDocumentsByClaimIds(claimIds: string[]) {
+  if (claimIds.length === 0) return new Map<string, ClaimDocument[]>();
+
+  const rows = await db
+    .select()
+    .from(claimDocuments)
+    .where(inArray(claimDocuments.claimId, claimIds))
+    .orderBy(asc(claimDocuments.docDate));
+
+  const byClaim = new Map<string, ClaimDocument[]>();
+  for (const row of rows) {
+    const list = byClaim.get(row.claimId) ?? [];
+    list.push({
+      id: row.id,
+      kind: row.kind,
+      title: row.title,
+      url: row.url,
+      docDate: row.docDate,
+    });
+    byClaim.set(row.claimId, list);
+  }
+  return byClaim;
+}
+
+export type ClaimDocument = {
+  id: string;
+  kind: string;
+  title: string;
+  url: string;
+  docDate: string | null;
+};
 
 export async function getCustomerByUserId(userId: string) {
   const result = await db
@@ -66,6 +100,10 @@ export async function getAllCustomersWithSummary() {
         ])
       : [[], [], []];
 
+  const documentsByClaim = await getDocumentsByClaimIds(
+    allClaims.map((c) => c.id)
+  );
+
   return allCustomers.map((customer) => {
     const customerPolicies = allPolicies.filter(
       (p) => p.customerId === customer.id
@@ -115,6 +153,7 @@ export async function getAllCustomersWithSummary() {
             dateResolved: c.dateResolved,
             paymentDate: c.paymentDate,
             paymentStatus: c.paymentStatus,
+            documents: documentsByClaim.get(c.id) ?? [],
           })),
         coverages: allCoverages
           .filter((cv) => cv.policyId === policy.id)
@@ -332,6 +371,10 @@ export async function getFullCustomerData(userId: string) {
     db.select().from(coverages).where(inArray(coverages.policyId, policyIds)),
   ]);
 
+  const documentsByClaim = await getDocumentsByClaimIds(
+    allClaims.map((c) => c.id)
+  );
+
   return {
     customer: customerInfo,
     policies: customerPolicies.map((policy) => ({
@@ -367,6 +410,7 @@ export async function getFullCustomerData(userId: string) {
           dateResolved: c.dateResolved,
           paymentDate: c.paymentDate,
           paymentStatus: c.paymentStatus,
+          documents: documentsByClaim.get(c.id) ?? [],
         })),
       coverages: allCoverages
         .filter((cv) => cv.policyId === policy.id)

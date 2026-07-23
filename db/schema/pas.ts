@@ -81,6 +81,22 @@ export const coverages = pgTable("coverages", {
   premium: numeric({ precision: 10, scale: 2 }).notNull(),
 });
 
+// Photos and documents attached to a claim (damage photos, repair estimates,
+// police reports, etc.). Files live under /public; `url` points at them.
+export const claimDocuments = pgTable("claim_documents", {
+  id: uuid().primaryKey().defaultRandom(),
+  claimId: uuid("claim_id")
+    .notNull()
+    .references(() => claims.id),
+  // "photo" | "document"
+  kind: varchar({ length: 20 }).notNull(),
+  title: varchar({ length: 255 }).notNull(),
+  url: text().notNull(),
+  // When the photo was taken / the document was received or filed.
+  docDate: date("doc_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 
 export const customersRelations = relations(customers, ({ many }) => ({
@@ -104,10 +120,18 @@ export const vehiclesRelations = relations(vehicles, ({ one }) => ({
   }),
 }));
 
-export const claimsRelations = relations(claims, ({ one }) => ({
+export const claimsRelations = relations(claims, ({ one, many }) => ({
   policy: one(policies, {
     fields: [claims.policyId],
     references: [policies.id],
+  }),
+  documents: many(claimDocuments),
+}));
+
+export const claimDocumentsRelations = relations(claimDocuments, ({ one }) => ({
+  claim: one(claims, {
+    fields: [claimDocuments.claimId],
+    references: [claims.id],
   }),
 }));
 

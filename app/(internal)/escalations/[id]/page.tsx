@@ -4,9 +4,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Car } from "lucide-react";
 import { getEscalationById } from "@/lib/db/escalations";
+import { getMessages } from "@/lib/db/messages";
 import { getCustomerByUserId, getFullCustomerData } from "@/lib/db/pas";
 import { policyTypeLabel } from "@/lib/pas/policy-view";
-import { EscalationRespondForm } from "@/components/internal/escalation-respond-form";
+import {
+  escalationStatusClass,
+  escalationStatusLabel,
+} from "@/lib/escalations/status";
+import { LiveAgentConsole } from "@/components/internal/live-agent-console";
 
 function fmtDate(d: string | Date | null) {
   if (!d) return "—";
@@ -64,7 +69,7 @@ export default async function EscalationDetailPage({
     ? await getFullCustomerData(escalation.userId)
     : null;
 
-  const isResolved = escalation.status === "resolved";
+  const transcript = await getMessages(escalation.conversationId);
 
   return (
     <div className="max-w-[1100px] px-8 py-7">
@@ -87,13 +92,11 @@ export default async function EscalationDetailPage({
           </div>
         </div>
         <span
-          className={`rounded-sm border px-2 py-0.5 text-[11px] ${
-            isResolved
-              ? "border-emerald-600/40 bg-emerald-600/15 text-ink"
-              : "border-amber-500/40 bg-amber-500/15 text-ink"
-          }`}
+          className={`rounded-sm border px-2 py-0.5 text-[11px] ${escalationStatusClass(
+            escalation.status
+          )}`}
         >
-          {isResolved ? "Resolved" : "Pending"}
+          {escalationStatusLabel(escalation.status)}
         </span>
       </div>
 
@@ -211,27 +214,22 @@ export default async function EscalationDetailPage({
           </div>
 
           <div className="rounded-md border border-rule bg-card p-5">
-            <div className="label-eyebrow">
-              {isResolved ? "Your reply" : "Respond to the customer"}
+            <div className="label-eyebrow">Live chat with the customer</div>
+            <div className="mt-3">
+              <LiveAgentConsole
+                escalationId={escalation.id}
+                customerName={escalation.customerName}
+                initialStatus={escalation.status}
+                initialAgentName={escalation.agentName}
+                initialMessages={transcript.map((m) => ({
+                  id: m.id,
+                  role: m.role,
+                  content: m.content,
+                  agentName: m.agentName,
+                  createdAt: m.createdAt.toISOString(),
+                }))}
+              />
             </div>
-            {isResolved ? (
-              <div className="mt-2 space-y-2">
-                <div className="text-[12px] text-muted-foreground">
-                  Sent by {escalation.agentName ?? "a specialist"} ·{" "}
-                  {fmtDate(escalation.resolvedAt)}
-                </div>
-                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-ink">
-                  {escalation.agentResponse}
-                </p>
-                <div className="rounded-md border border-emerald-600/30 bg-emerald-600/10 px-3 py-2 text-[12px] text-ink">
-                  ✓ Recap delivered to the customer&apos;s chat.
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3">
-                <EscalationRespondForm escalationId={escalation.id} />
-              </div>
-            )}
           </div>
         </section>
       </div>

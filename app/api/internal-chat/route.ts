@@ -2,6 +2,7 @@ import {
   streamText,
   UIMessage,
   convertToModelMessages,
+  pruneMessages,
   stepCountIs,
 } from "ai";
 import { chatModel } from "@/lib/ai/provider";
@@ -20,7 +21,17 @@ export async function POST(req: Request) {
   const result = streamText({
     model: chatModel,
     system: buildInternalSystemPrompt(),
-    messages: await convertToModelMessages(messages),
+    // The client keeps every tool call and its JSON result in the message list,
+    // so a portfolio snapshot read minutes ago would still be in context — and
+    // the model would answer from it after an agent edits the record in PAS.
+    // Drop tool traffic from history so the only way to state a fact is to call
+    // the tool again now. Only history is affected; the tools this run calls are
+    // untouched.
+    messages: pruneMessages({
+      messages: await convertToModelMessages(messages),
+      toolCalls: "all",
+      emptyMessages: "remove",
+    }),
     tools: buildInternalTools(),
     stopWhen: stepCountIs(5),
     experimental_telemetry: {

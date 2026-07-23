@@ -80,8 +80,11 @@ export const customerPolicyTool = tool({
       };
     }
 
+    // Stamped so a re-read is visibly a re-read and not a repeat of the answer
+    // the model already gave. Never surfaced to the customer.
     return {
       found: true,
+      retrievedAt: new Date().toISOString(),
       data,
     };
   },
@@ -129,6 +132,7 @@ export const escalationQueueTool = tool({
       status === "all" ? all : all.filter((e) => e.status === "pending");
 
     return {
+      retrievedAt: new Date().toISOString(),
       pendingCount: all.filter((e) => e.status === "pending").length,
       total: all.length,
       escalations: filtered.map((e) => ({
@@ -173,6 +177,7 @@ export const portfolioTool = tool({
     }));
 
     return {
+      retrievedAt: new Date().toISOString(),
       summary: {
         policyholders: rows.length,
         totalPremium: rows.reduce((s, r) => s + r.premium, 0),

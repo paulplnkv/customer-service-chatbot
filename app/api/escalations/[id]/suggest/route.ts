@@ -8,8 +8,8 @@ const UUID_REGEX =
 
 // Draft a suggested reply for the human agent. Grounded ONLY in the escalation
 // reason, the conversation summary, and the customer's policy/claims record.
-// Returns a draft note the specialist can edit before sending; the /respond
-// route then turns the final note into a customer-facing recap.
+// Returns a draft note the specialist can edit before sending; the /resolve
+// route then turns the final note into the customer-facing closing recap.
 //
 // NOTE: internal agent action — in production this must require agent auth.
 export async function POST(

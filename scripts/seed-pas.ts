@@ -2,10 +2,18 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { customers, policies, vehicles, claims, coverages } from "../db/schema/pas";
+import {
+  customers,
+  policies,
+  vehicles,
+  claims,
+  coverages,
+  claimDocuments,
+} from "../db/schema/pas";
 import { user, account } from "../db/schema/auth";
 import { hashPassword } from "better-auth/crypto";
 import { eq } from "drizzle-orm";
+import { CLAIM_DOCUMENTS } from "./data/claim-documents";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
@@ -434,6 +442,7 @@ async function seed() {
 
   // Clear existing data in reverse dependency order
   await db.delete(coverages);
+  await db.delete(claimDocuments);
   await db.delete(claims);
   await db.delete(vehicles);
   await db.delete(policies);
@@ -489,10 +498,27 @@ async function seed() {
       }
 
       if (claimData.length > 0) {
-        await db.insert(claims).values(
-          claimData.map((c) => ({ ...c, policyId: policy.id }))
-        );
+        const insertedClaims = await db
+          .insert(claims)
+          .values(claimData.map((c) => ({ ...c, policyId: policy.id })))
+          .returning({ id: claims.id, claimNumber: claims.claimNumber });
         console.log(`  Added ${claimData.length} claim(s) to ${policyValues.policyNumber}`);
+
+        // Attach case documents/photos to the claims that have them.
+        for (const inserted of insertedClaims) {
+          const docs = CLAIM_DOCUMENTS[inserted.claimNumber];
+          if (!docs?.length) continue;
+          await db.insert(claimDocuments).values(
+            docs.map((d) => ({
+              claimId: inserted.id,
+              kind: d.kind,
+              title: d.title,
+              url: d.url,
+              docDate: d.docDate,
+            }))
+          );
+          console.log(`    Added ${docs.length} document(s) to ${inserted.claimNumber}`);
+        }
       }
 
       if (coverageData.length > 0) {

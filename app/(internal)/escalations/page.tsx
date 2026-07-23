@@ -2,6 +2,10 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { getAllEscalations } from "@/lib/db/escalations";
+import {
+  escalationStatusClass,
+  escalationStatusLabel,
+} from "@/lib/escalations/status";
 
 export default async function EscalationsPage() {
   const escalations = await getAllEscalations();
@@ -57,13 +61,11 @@ export default async function EscalationsPage() {
                       )}
                     </Link>
                     <span
-                      className={`rounded-sm border px-1.5 py-0.5 text-[10px] ${
-                        esc.status === "resolved"
-                          ? "border-emerald-600/40 bg-emerald-600/15 text-ink"
-                          : "border-amber-500/40 bg-amber-500/15 text-ink"
-                      }`}
+                      className={`rounded-sm border px-1.5 py-0.5 text-[10px] ${escalationStatusClass(
+                        esc.status
+                      )}`}
                     >
-                      {esc.status === "resolved" ? "Resolved" : "Pending"}
+                      {escalationStatusLabel(esc.status)}
                     </span>
                   </div>
                   {esc.customerEmail && (

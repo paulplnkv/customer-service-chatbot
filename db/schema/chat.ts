@@ -15,8 +15,11 @@ export const messages = pgTable("messages", {
   conversationId: uuid("conversation_id")
     .notNull()
     .references(() => conversations.id),
+  // "user" | "assistant" | "agent" (a human support agent during a live handoff)
   role: varchar({ length: 20 }).notNull(),
   content: text().notNull(),
+  // Display name of the human agent, set only on role = "agent" messages.
+  agentName: varchar("agent_name", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

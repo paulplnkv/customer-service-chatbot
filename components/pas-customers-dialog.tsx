@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Paperclip } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,10 @@ import { VehicleFormDialog } from "@/components/pas/vehicle-form-dialog";
 import { ClaimFormDialog } from "@/components/pas/claim-form-dialog";
 import { CoverageFormDialog } from "@/components/pas/coverage-form-dialog";
 import { DeleteConfirmDialog } from "@/components/pas/delete-confirm-dialog";
+import {
+  ClaimDocumentsDialog,
+  type ClaimDocument,
+} from "@/components/pas/claim-documents-dialog";
 import {
   deletePolicyAction,
   deleteVehicleAction,
@@ -59,6 +64,7 @@ type Claim = {
   dateOfIncident: string;
   dateFiled: string;
   dateResolved: string | null;
+  documents?: ClaimDocument[];
 };
 
 type Policy = {
@@ -101,6 +107,7 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
   const [selected, setSelected] = useState<Customer | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null);
+  const [docsTarget, setDocsTarget] = useState<Claim | null>(null);
 
   // Sync selected customer with latest props after mutations
   useEffect(() => {
@@ -496,6 +503,9 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                               <TableHead className="text-right">
                                 Incident
                               </TableHead>
+                              <TableHead className="text-right">
+                                Docs
+                              </TableHead>
                               <TableHead className="w-[100px]" />
                             </TableRow>
                           </TableHeader>
@@ -529,6 +539,23 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
                                 </TableCell>
                                 <TableCell className="text-right text-muted-foreground">
                                   {cl.dateOfIncident}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {cl.documents && cl.documents.length > 0 ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 text-xs"
+                                      onClick={() => setDocsTarget(cl)}
+                                    >
+                                      <Paperclip className="size-3" />
+                                      {cl.documents.length}
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">
+                                      &mdash;
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <Button
@@ -673,6 +700,16 @@ export function PasCustomersTable({ customers }: { customers: Customer[] }) {
           </DialogContent>
         )}
       </Dialog>
+
+      {/* Case documents gallery */}
+      <ClaimDocumentsDialog
+        open={docsTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDocsTarget(null);
+        }}
+        claimNumber={docsTarget?.claimNumber ?? ""}
+        documents={docsTarget?.documents ?? []}
+      />
 
       {/* Delete Confirmation */}
       <DeleteConfirmDialog

@@ -11,7 +11,14 @@ import {
 } from "@/components/ai-elements/conversation";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { ArrowUp, Bot, User as UserIcon, RefreshCcw, Copy } from "lucide-react";
+import {
+  ArrowUp,
+  Bot,
+  User as UserIcon,
+  RefreshCcw,
+  Copy,
+  Headset,
+} from "lucide-react";
 import { EscalationConfirmation } from "@/components/chat/escalation-confirmation";
 import { authClient } from "@/lib/auth-client";
 
@@ -22,6 +29,25 @@ type EscalationToolPart = {
   input: { reason: string };
   output?: unknown;
 };
+
+// Set by the server on messages written by a human agent (see dbMessagesToUIMessages)
+// and by the live poll below, so those turns render as a person rather than the bot.
+type AgentMeta = { sender: "agent"; agentName: string | null };
+
+function agentMetaOf(message: UIMessage): AgentMeta | null {
+  const meta = message.metadata as AgentMeta | undefined;
+  return meta?.sender === "agent" ? meta : null;
+}
+
+function initialsOf(name: string | null) {
+  if (!name) return "SA";
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
+}
 
 const toolLabels: Record<string, string> = {
   searchKnowledgeBase: "Searching knowledge base",
@@ -69,10 +95,16 @@ export function ChatInterface({
     () => conversationId ?? crypto.randomUUID()
   );
 
-  // Live agent-recap loop: after the customer escalates, poll for the support
-  // agent's reply and surface the assistant's recap in the open chat.
-  const [escalationPending, setEscalationPending] = useState(false);
-  const recapShownRef = useRef(false);
+  // Live-handoff loop. Once the customer escalates (or on reload of a chat that
+  // already has an escalation) we poll for the human agent's turns and surface
+  // them here. While the escalation is "live" the AI is out of the loop and the
+  // customer's messages are delivered straight to the agent.
+  const [escalationStatus, setEscalationStatus] = useState<string | null>(null);
+  const [agentName, setAgentName] = useState<string | null>(null);
+  const [pollEnabled, setPollEnabled] = useState(!!conversationId);
+
+  const awaitingAgent = escalationStatus === "pending";
+  const liveAgent = escalationStatus === "live";
 
   const transport = useMemo(
     () =>
@@ -111,8 +143,9 @@ export function ChatInterface({
       setMessages([]);
       setInput("");
       hasNavigated.current = false;
-      setEscalationPending(false);
-      recapShownRef.current = false;
+      setEscalationStatus(null);
+      setAgentName(null);
+      setPollEnabled(false);
     };
     window.addEventListener("new-chat", handler);
     return () => window.removeEventListener("new-chat", handler);
@@ -138,7 +171,11 @@ export function ChatInterface({
   function send(text: string) {
     const t = text.trim();
     if (!t || busy) return;
-    sendMessage({ text: t });
+    if (liveAgent) {
+      void sendToAgent(t);
+    } else {
+      sendMessage({ text: t });
+    }
     setInput("");
   }
 
@@ -188,8 +225,8 @@ export function ChatInterface({
         if (!res.ok) {
           console.error("Escalation request failed:", res.status);
         } else {
-          recapShownRef.current = false;
-          setEscalationPending(true);
+          setEscalationStatus("pending");
+          setPollEnabled(true);
         }
       } catch (err) {
         console.error("Escalation request error:", err);
@@ -198,43 +235,87 @@ export function ChatInterface({
     [chatId, updateEscalationToolPart]
   );
 
-  // Poll for the support agent's reply while an escalation is pending, then
-  // append the assistant's recap to the conversation.
-  useEffect(() => {
-    if (!escalationPending) return;
-    let active = true;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/escalations/by-conversation/${chatId}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          status: string | null;
-          recap?: string | null;
-          recapId?: string | null;
-        };
-        if (data.status === "resolved" && active && !recapShownRef.current) {
-          recapShownRef.current = true;
-          setEscalationPending(false);
-          if (data.recap) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: data.recapId ?? crypto.randomUUID(),
-                role: "assistant" as const,
-                parts: [{ type: "text" as const, text: data.recap as string }],
-              },
-            ]);
-          }
-        }
-      } catch {
-        // transient network error — keep polling
+  // Fetch the escalation state plus every message the human agent has sent, and
+  // merge in the ones we haven't shown yet (de-duplicated by database id).
+  const pollEscalation = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/escalations/by-conversation/${chatId}`);
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        status: string | null;
+        agentName: string | null;
+        messages: {
+          id: string;
+          content: string;
+          agentName: string | null;
+        }[];
+      };
+
+      setEscalationStatus(data.status);
+      if (data.agentName) setAgentName(data.agentName);
+      // No escalation on this conversation — nothing to watch for.
+      if (data.status === null) setPollEnabled(false);
+
+      if (data.messages?.length) {
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const additions = data.messages.filter((m) => !seen.has(m.id));
+          if (additions.length === 0) return prev;
+          return [
+            ...prev,
+            ...additions.map((m) => ({
+              id: m.id,
+              role: "assistant" as const,
+              metadata: {
+                sender: "agent",
+                agentName: m.agentName,
+              } satisfies AgentMeta,
+              parts: [{ type: "text" as const, text: m.content }],
+            })),
+          ];
+        });
       }
-    }, 3000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [escalationPending, chatId, setMessages]);
+    } catch {
+      // transient network error — the next tick will retry
+    }
+  }, [chatId, setMessages]);
+
+  // Poll while a human agent is engaged. Runs on mount too, so reloading the page
+  // mid-handoff resumes the live loop.
+  useEffect(() => {
+    if (!pollEnabled || escalationStatus === "resolved") return;
+    void pollEscalation();
+    const interval = setInterval(pollEscalation, 3000);
+    return () => clearInterval(interval);
+  }, [pollEnabled, escalationStatus, pollEscalation]);
+
+  // While the agent has the conversation, the customer's turn goes straight to
+  // them — never to the model.
+  const sendToAgent = useCallback(
+    async (text: string) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "user" as const,
+          parts: [{ type: "text" as const, text }],
+        },
+      ]);
+      try {
+        const res = await fetch(`/api/conversations/${chatId}/message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        if (!res.ok) {
+          console.error("Could not deliver message to agent:", res.status);
+        }
+      } catch (err) {
+        console.error("Could not deliver message to agent:", err);
+      }
+    },
+    [chatId, setMessages]
+  );
 
   const handleEscalationDismiss = useCallback(
     (toolCallId: string) => {
@@ -244,6 +325,8 @@ export function ChatInterface({
   );
 
   const empty = messages.length === 0;
+  // Marks where the human handoff starts, so we can draw the "joined" divider once.
+  const firstAgentMessageId = messages.find((m) => agentMetaOf(m))?.id;
 
   return (
     <div className="flex h-full flex-col bg-paper">
@@ -303,6 +386,44 @@ export function ChatInterface({
                               <UserIcon size={14} />
                             </span>
                           </div>
+                        );
+                      }
+                      // A human agent's turn — show who is speaking instead of
+                      // the bot avatar, and mark where the handoff happened.
+                      const agent = agentMetaOf(message);
+                      if (agent) {
+                        return (
+                          <Fragment key={`${message.id}-${i}`}>
+                            {message.id === firstAgentMessageId && (
+                              <div className="flex items-center gap-3 py-1">
+                                <span className="h-px flex-1 bg-rule" />
+                                <span className="flex items-center gap-1.5 whitespace-nowrap text-[11.5px] text-muted-foreground">
+                                  <Headset size={12} />
+                                  {agent.agentName ?? "A specialist"} joined the
+                                  chat
+                                </span>
+                                <span className="h-px flex-1 bg-rule" />
+                              </div>
+                            )}
+                            <div className="flex items-start gap-3">
+                              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[10px] font-medium text-paper">
+                                {initialsOf(agent.agentName)}
+                              </span>
+                              <div className="max-w-[78%] flex-1">
+                                <div className="mb-1 flex items-center gap-1.5">
+                                  <span className="text-[12px] font-medium text-ink">
+                                    {agent.agentName ?? "Sterling specialist"}
+                                  </span>
+                                  <span className="rounded-sm border border-rule bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                                    Live agent
+                                  </span>
+                                </div>
+                                <MessageResponse className="text-[14px] leading-relaxed">
+                                  {part.text}
+                                </MessageResponse>
+                              </div>
+                            </div>
+                          </Fragment>
                         );
                       }
                       const isLastAssistant =
@@ -428,7 +549,7 @@ export function ChatInterface({
             </div>
           )}
 
-          {escalationPending && (
+          {awaitingAgent && (
             <div className="flex items-start gap-3">
               <span className="mt-1 text-muted-foreground">
                 <Bot size={14} />
@@ -448,7 +569,8 @@ export function ChatInterface({
             ref={suggestRef}
             className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]"
           >
-            {suggestions.map((s) => (
+            {/* Canned AI prompts are irrelevant once a person takes over. */}
+            {(liveAgent ? [] : suggestions).map((s) => (
               <button
                 key={s}
                 onClick={() => send(s)}
@@ -478,7 +600,11 @@ export function ChatInterface({
                   send(input);
                 }
               }}
-              placeholder="Ask about your policy, claims, or coverage…"
+              placeholder={
+                liveAgent
+                  ? `Message ${agentName ?? "the specialist"}…`
+                  : "Ask about your policy, claims, or coverage…"
+              }
               rows={2}
               className="max-h-40 min-h-[72px] w-full resize-none rounded-md border border-rule bg-secondary/50 px-3.5 py-3 pr-14 text-[14px] text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />

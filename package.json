@@ -15,6 +15,8 @@
     "db:verify": "tsx scripts/verify-db.ts",
     "db:seed:kb": "tsx scripts/seed-knowledge-base.ts",
     "db:seed:pas": "tsx scripts/seed-pas.ts",
+    "db:seed:claim-docs": "tsx scripts/seed-claim-documents.ts",
+    "assets:claims": "tsx scripts/generate-claim-assets.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "evals": "evalite",

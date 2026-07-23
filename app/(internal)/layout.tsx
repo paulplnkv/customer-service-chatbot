@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { getAllEscalations } from "@/lib/db/escalations";
+import { isOpenEscalation } from "@/lib/escalations/status";
 import { InternalSidebar } from "@/components/internal/internal-sidebar";
 
 export default async function InternalLayout({
@@ -9,7 +10,7 @@ export default async function InternalLayout({
   children: React.ReactNode;
 }) {
   const escalations = await getAllEscalations();
-  const pending = escalations.filter((e) => e.status === "pending").length;
+  const pending = escalations.filter((e) => isOpenEscalation(e.status)).length;
 
   return (
     <div className="flex min-h-screen">
