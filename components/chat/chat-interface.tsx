@@ -11,6 +11,7 @@ import {
 } from "@/components/ai-elements/conversation";
 import { MessageResponse } from "@/components/ai-elements/message";
 import { Shimmer } from "@/components/ai-elements/shimmer";
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import {
   ArrowUp,
   Bot,
@@ -84,7 +85,6 @@ export function ChatInterface({
   const hasNavigated = useMemo(() => ({ current: !!conversationId }), [conversationId]);
   const [input, setInput] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const suggestRef = useRef<HTMLDivElement>(null);
 
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const firstName = session?.user?.name?.split(" ")[0];
@@ -150,21 +150,6 @@ export function ChatInterface({
     window.addEventListener("new-chat", handler);
     return () => window.removeEventListener("new-chat", handler);
   }, [setMessages, hasNavigated]);
-
-  // Let a mouse wheel scroll the horizontal suggestions row (vertical wheel →
-  // horizontal). Attached natively because React's onWheel is passive and so
-  // can't preventDefault.
-  useEffect(() => {
-    const el = suggestRef.current;
-    if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (el.scrollWidth <= el.clientWidth || e.deltaY === 0) return;
-      e.preventDefault();
-      el.scrollLeft += e.deltaY;
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, []);
 
   const busy = status === "streaming" || status === "submitted";
 
@@ -564,24 +549,24 @@ export function ChatInterface({
       </Conversation>
 
       <div className="shrink-0 border-t border-rule bg-paper">
-        <div className={`${widthClass} pt-4`}>
-          <div
-            ref={suggestRef}
-            className="flex gap-1.5 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin]"
-          >
-            {/* Canned AI prompts are irrelevant once a person takes over. */}
-            {(liveAgent ? [] : suggestions).map((s) => (
-              <button
-                key={s}
-                onClick={() => send(s)}
-                disabled={busy}
-                className="shrink-0 whitespace-nowrap rounded-full border border-rule px-3 py-1 text-[11.5px] text-ink transition-colors hover:bg-secondary disabled:opacity-50"
-              >
-                {s}
-              </button>
-            ))}
+        {/* Canned AI prompts are irrelevant once a person takes over. A 2-up
+            grid of wrapping tiles keeps all four readable in the phone frame,
+            where a single row would need horizontal scrolling. */}
+        {!liveAgent && (
+          <div className={`${widthClass} pt-4`}>
+            <Suggestions className="grid grid-cols-2 items-stretch gap-1.5">
+              {suggestions.map((s) => (
+                <Suggestion
+                  key={s}
+                  suggestion={s}
+                  onClick={send}
+                  disabled={busy}
+                  className="h-auto w-full justify-start whitespace-normal rounded-lg border-rule bg-transparent px-3 py-2 text-left text-[11.5px] font-normal leading-snug text-ink hover:bg-secondary"
+                />
+              ))}
+            </Suggestions>
           </div>
-        </div>
+        )}
         <div className={`${widthClass} py-5`}>
           <form
             onSubmit={(e) => {

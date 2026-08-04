@@ -184,7 +184,11 @@ export function LiveAgentConsole({
   return (
     <div className="flex flex-col">
       {/* Transcript */}
-      <Conversation className="max-h-[460px] min-h-[240px] rounded-md border border-rule bg-paper">
+      {/* Needs a definite height: use-stick-to-bottom's scroller is inline
+          `height: 100%`, which won't resolve against a max-height-only parent
+          (and `flex-none` keeps Conversation's base `flex-1` from overriding
+          it), leaving the transcript clipped with no scrollbar. */}
+      <Conversation className="h-[460px] flex-none rounded-md border border-rule bg-paper">
         <ConversationContent className="gap-4 p-4">
           {messages.length === 0 ? (
             <p className="text-[13px] text-muted-foreground">
